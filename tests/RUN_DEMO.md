@@ -91,7 +91,21 @@ lerobot-replay \
 
 ---
 
+## Start Gamepad Teleoperation without recording
+
+```bash
+lerobot-teleoperate \
+    --robot.type=bi_openarm_follower \
+    --robot.left_arm_config.port=can1 \
+    --robot.left_arm_config.side=left \
+    --robot.right_arm_config.port=can0 \
+    --robot.right_arm_config.side=right \
+    --teleop.type=openarm_bi_gamepad_joints \
+    --teleop.joint_velocity_scale=60.0
+```
 ## Recording Your Own Demos
+
+---
 
 To record your own demonstrations:
 
