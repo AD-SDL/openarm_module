@@ -175,9 +175,9 @@ Examples:
         """
     )
     
-    parser.add_argument('--waves', type=int, default=20, help='Number of complete waves (default: 20)')
+    parser.add_argument('--waves', type=int, default=5, help='Number of complete waves (default: 5)')
     parser.add_argument('--angle', type=float, default=30.0, help='Wave angle in degrees (default: 30.0)')
-    parser.add_argument('--speed', type=float, default=60.0, help='Wave speed in degrees/second (default: 60.0)')
+    parser.add_argument('--speed', type=float, default=30.0, help='Wave speed in degrees/second (default: 30.0)')
     
     args = parser.parse_args()
     
