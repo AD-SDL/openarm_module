@@ -81,4 +81,4 @@ finally:
     robot.disconnect()
 
 print("\n✓ COMPLETE! LeRobot calibrated at hardware zero.")
-print("Test with: python ~/reset_to_zero_working.py")
+print("Test with: python ~/movet_to_zero.py")
