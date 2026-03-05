@@ -6,20 +6,10 @@ authors = [
     {name = "Doga Ozgulbas", email="dozgulbas@anl.gov"},
 ]
 dependencies = [
-    # LeRobot fork with OpenArm support | TODO: This takes for ever, for now install seperately 
-    # "lerobot @ git+https://github.com/AD-SDL/lerobot.git@main",
-    
-    # OpenArm Python bindings
     "openarm-can>=1.2.8",
-    
-    # CAN bus support
     "python-can>=4.2.0,<5.0.0",
-    
-    # Gamepad support
     "pygame>=2.5.1,<2.7.0",
     "hidapi>=0.14.0,<0.15.0",
-    
-    # MAD-Sci integration
     "madsci-node-module~=0.6.1",
     "madsci-client~=0.6.1",
     "madsci-common~=0.6.1",
@@ -41,9 +31,3 @@ dev = [
 [build-system]
 requires = ["setuptools>=71.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
-
-[tool.setuptools.packages.find]
-where = ["src"]
-
-[tool.pdm.scripts]
-setup-can = "setup_system.sh"
