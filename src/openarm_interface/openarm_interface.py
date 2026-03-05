@@ -567,7 +567,7 @@ if __name__ == "__main__":
         robot.moveJ(right_angles=right_target, speed=0.5)
 
         # Move both arms simultaneously
-        left_target = [0.0, -0.3, 0.0, 0.0, 0.0, 0.0, 0.0]
+        left_target = [0.0, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0]
         print("Moving both arms...")
         robot.moveJ(right_angles=right_target, left_angles=left_target, speed=0.3)
 
