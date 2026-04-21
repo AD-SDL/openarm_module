@@ -8,6 +8,7 @@ This repository contains a modified fork of LeRobot with OpenArm-specific enhanc
 
 - **Bimanual OpenArm Support**: Control two OpenArm follower robots simultaneously
 - **Gamepad Teleoperation**: PlayStation/Xbox controller support for intuitive joint control
+- **Leader Arm Teleoperation**: Bimanual leader arm control for high-quality demonstration collection
 - **Hardware Calibration Sync**: Proper integration with OpenArm's hardware calibration system
 - **Velocity & Torque Support**: Full action space including position, velocity, and torque
 - **Recording & Replay**: Compatible with LeRobot's dataset recording and policy training
@@ -88,48 +89,87 @@ If the arms move to awkward or asymmetric positions, proceed with recalibration.
 **WARNING**: This will overwrite the existing calibration. Only do this if verification above failed.
 
 ```bash
-# Calibrate right arm (can0)
+# Calibrate follower right arm (can0)
 openarm-can-zero-position-calibration --canport can0 --arm-side right_arm
 
-# Calibrate left arm (can1)
+# Calibrate follower left arm (can1)
 openarm-can-zero-position-calibration --canport can1 --arm-side left_arm
-```
 
-This tool:
-1. Moves each joint to its mechanical stops
-2. Calculates the center position
-3. Sets that as zero in motor memory
-4. Stores the calibration permanently
+# Calibrate leader right arm (can2)
+openarm-can-zero-position-calibration --canport can2 --arm-side right_arm
+
+# Calibrate leader left arm (can3)
+openarm-can-zero-position-calibration --canport can3 --arm-side left_arm
+```
 
 ### Sync Calibration with LeRobot
 
-**REQUIRED**: After verifying or recalibrating hardware, sync LeRobot's calibration files with the hardware zero positions:
+**REQUIRED**: After verifying or recalibrating hardware, sync LeRobot's calibration files:
 
 ```bash
 # Delete old LeRobot calibration files (if any)
-rm -rf ~/.cache/huggingface/lerobot/calibration/robots/bi_openarm_follower/
+rm -rf ~/.cache/huggingface/lerobot/calibration/
 
-# Run calibration sync script
-# This moves arms to hardware zero and creates LeRobot calibration files
-python scripts/sync_calibration.py
+# Calibrate follower arms
+lerobot-calibrate \
+    --robot.type=openarm_follower \
+    --robot.port=can0 \
+    --robot.side=right \
+    --robot.id=my_openarm_follower_right
+
+lerobot-calibrate \
+    --robot.type=openarm_follower \
+    --robot.port=can1 \
+    --robot.side=left \
+    --robot.id=my_openarm_follower_left
+
+# Calibrate leader arms
+lerobot-calibrate \
+    --teleop.type=openarm_leader \
+    --teleop.port=can2 \
+    --teleop.id=my_openarm_leader_right
+
+lerobot-calibrate \
+    --teleop.type=openarm_leader \
+    --teleop.port=can3 \
+    --teleop.id=my_openarm_leader_left
 ```
-
-**What this does:**
-1. Uses OpenArm C++ library to move arms to hardware-calibrated zero
-2. Connects LeRobot and sets current position as LeRobot's zero
-3. Saves calibration files to `~/.cache/huggingface/lerobot/calibration/`
-
 
 ### Verify CAN Interfaces
 
 After plugging in USB-CAN adapters, verify they're configured:
 
 ```bash
-# Check CAN interfaces
-ip link show can0 can1
+ip link show can0 can1 can2 can3
+```
 
-# Should show both as UP and RUNNING
-# If not, unplug and replug USB-CAN adapters (auto-configures via udev)
+All four interfaces should show as UP. If not, unplug and replug the USB-CAN adapters.
+
+**CAN port mapping:**
+- `can0` — follower right arm
+- `can1` — follower left arm
+- `can2` — leader right arm
+- `can3` — leader left arm
+
+### Camera Setup
+
+USB wrist cameras are identified by physical USB port using udev symlinks. After plugging in cameras:
+
+```bash
+# Verify symlinks are created
+ls -la /dev/video-wrist-*
+# Expected:
+# /dev/video-wrist-left -> videoX
+# /dev/video-wrist-right -> videoX
+```
+
+If symlinks are missing, check the udev rules file at `/etc/udev/rules.d/99-openarm-cameras.rules`.
+
+Get the RealSense chest camera serial number:
+
+```bash
+source ~/humanoids/lerobot_env/bin/activate
+python3 -c "import pyrealsense2 as rs; ctx = rs.context(); print([d.get_info(rs.camera_info.serial_number) for d in ctx.devices])"
 ```
 
 ### Manual CAN Configuration (if needed)
@@ -187,6 +227,55 @@ lerobot-teleoperate \
 - **Triangle/Y**: Print current arm position
 - **Circle/B**: Exit teleoperation
 
+### Leader Arm Teleoperation
+
+Leader arm teleoperation produces significantly smoother demonstrations than gamepad control and is recommended for high-quality data collection.
+
+**CAN port mapping for leader arm setup:**
+- `can0/can1` — follower right/left arms
+- `can2/can3` — leader right/left arms
+
+**Set camera formats before starting:**
+```bash
+v4l2-ctl --device=/dev/video-wrist-left --set-fmt-video=width=640,height=480,pixelformat=MJPG
+v4l2-ctl --device=/dev/video-wrist-right --set-fmt-video=width=640,height=480,pixelformat=MJPG
+```
+
+**Teleoperate with cameras:**
+```bash
+lerobot-teleoperate \
+    --robot.type=bi_openarm_follower \
+    --robot.left_arm_config.port=can1 \
+    --robot.left_arm_config.side=left \
+    --robot.left_arm_config.cameras="{ \
+        chest: {type: intelrealsense, serial_number_or_name: YOUR_SERIAL, width: 848, height: 480, fps: 30}, \
+        wrist_left: {type: opencv, index_or_path: /dev/video-wrist-left, width: 640, height: 480, fps: 30, fourcc: MJPG} \
+    }" \
+    --robot.right_arm_config.port=can0 \
+    --robot.right_arm_config.side=right \
+    --robot.right_arm_config.cameras="{ \
+        wrist_right: {type: opencv, index_or_path: /dev/video-wrist-right, width: 640, height: 480, fps: 30, fourcc: MJPG} \
+    }" \
+    --robot.id=my_bimanual_follower \
+    --teleop.type=bi_openarm_leader \
+    --teleop.left_arm_config.port=can3 \
+    --teleop.right_arm_config.port=can2 \
+    --teleop.id=my_bimanual_leader \
+    --teleop.left_arm_config.position_kp="[120,120,60,20,12,15,12,2]" \
+    --teleop.left_arm_config.position_kd="[2,2,1.0,0.5,0.1,0.1,0.1,0.02]" \
+    --teleop.right_arm_config.position_kp="[120,120,60,20,12,15,12,2]" \
+    --teleop.right_arm_config.position_kd="[2,2,1.0,0.5,0.1,0.1,0.1,0.02]" \
+    --robot.left_arm_config.position_kp="[240,240,120,40,24,31,25,5]" \
+    --robot.left_arm_config.position_kd="[5,5,1.5,0.3,0.3,0.3,0.3,0.05]" \
+    --robot.right_arm_config.position_kp="[240,240,120,40,24,31,25,5]" \
+    --robot.right_arm_config.position_kd="[5,5,1.5,0.3,0.3,0.3,0.3,0.05]" \
+    --display_data=true
+```
+
+**Tuning notes:**
+- `teleop` kp/kd values control leader arm stiffness — lower values make the leader easier to backdrive
+- `robot` kp/kd values control follower arm responsiveness
+
 ### Common Issues
 
 **Controller not responding:**
@@ -201,6 +290,8 @@ lerobot-teleoperate \
 
 ## Recording Demonstrations
 
+### Gamepad Recording
+
 ```bash
 export HF_HUB_OFFLINE=1
 
@@ -214,18 +305,62 @@ lerobot-record \
     --teleop.joint_velocity_scale=60.0 \
     --dataset.repo_id=local/my_task \
     --dataset.single_task="Task description" \
-    --dataset.fps=60 \
+    --dataset.fps=30 \
     --dataset.num_episodes=50 \
     --dataset.episode_time_s=30 \
     --dataset.reset_time_s=10 \
     --dataset.push_to_hub=false
 ```
 
+### Leader Arm Recording
+
+```bash
+export HF_HUB_OFFLINE=1
+
+v4l2-ctl --device=/dev/video-wrist-left --set-fmt-video=width=640,height=480,pixelformat=MJPG
+v4l2-ctl --device=/dev/video-wrist-right --set-fmt-video=width=640,height=480,pixelformat=MJPG
+
+lerobot-record \
+    --robot.type=bi_openarm_follower \
+    --robot.left_arm_config.port=can1 \
+    --robot.left_arm_config.side=left \
+    --robot.left_arm_config.cameras="{ \
+        chest: {type: intelrealsense, serial_number_or_name: YOUR_SERIAL, width: 848, height: 480, fps: 30, use_depth: true}, \
+        wrist_left: {type: opencv, index_or_path: /dev/video-wrist-left, width: 640, height: 480, fps: 30, fourcc: MJPG} \
+    }" \
+    --robot.right_arm_config.port=can0 \
+    --robot.right_arm_config.side=right \
+    --robot.right_arm_config.cameras="{ \
+        wrist_right: {type: opencv, index_or_path: /dev/video-wrist-right, width: 640, height: 480, fps: 30, fourcc: MJPG} \
+    }" \
+    --robot.id=my_bimanual_follower \
+    --teleop.type=bi_openarm_leader \
+    --teleop.left_arm_config.port=can3 \
+    --teleop.right_arm_config.port=can2 \
+    --teleop.id=my_bimanual_leader \
+    --teleop.left_arm_config.position_kp="[120,120,60,20,12,15,12,2]" \
+    --teleop.left_arm_config.position_kd="[2,2,1.0,0.5,0.1,0.1,0.1,0.02]" \
+    --teleop.right_arm_config.position_kp="[120,120,60,20,12,15,12,2]" \
+    --teleop.right_arm_config.position_kd="[2,2,1.0,0.5,0.1,0.1,0.1,0.02]" \
+    --dataset.repo_id=local/my_task \
+    --dataset.single_task="Task description" \
+    --dataset.fps=30 \
+    --dataset.num_episodes=100 \
+    --dataset.episode_time_s=40 \
+    --dataset.reset_time_s=10 \
+    --dataset.push_to_hub=false \
+    --display_data=false
+```
+
+To resume adding episodes to an existing dataset add `--resume=true` to the command.
+
 **Recording Parameters:**
-- `--dataset.fps`: Recording framerate (60 fps recommended for smooth playback)
-- `--dataset.num_episodes`: Number of demonstrations
-- `--dataset.episode_time_s`: Maximum episode duration
-- `--dataset.reset_time_s`: Time to reset between episodes
+- `--dataset.fps`: Recording framerate (30 fps recommended for leader arm)
+- `--dataset.num_episodes`: Number of demonstrations to collect
+- `--dataset.episode_time_s`: Maximum episode duration in seconds
+- `--dataset.reset_time_s`: Time between episodes for scene reset
+- `--dataset.push_to_hub`: Set to false for local-only storage
+- `--resume`: Set to true to append episodes to an existing dataset
 
 **Dataset location:** `~/.cache/huggingface/lerobot/local/`
 
