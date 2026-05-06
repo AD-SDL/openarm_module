@@ -7,8 +7,8 @@ print("=== OpenArm Hardware-Synced Calibration ===")
 # Step 1: Move to hardware zero
 print("\nStep 1: Moving arms to hardware-calibrated zero...")
 
-right_arm = oa.OpenArm("can0", True)
-left_arm = oa.OpenArm("can1", True)
+right_arm = oa.OpenArm("can2", True)
+left_arm = oa.OpenArm("can3", True)
 
 motor_types = [
     oa.MotorType.DM8009, oa.MotorType.DM8009,

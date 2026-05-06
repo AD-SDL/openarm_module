@@ -22,8 +22,8 @@ from lerobot.robots.openarm_follower import OpenArmFollowerConfigBase
 
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
-POLICY_PATH    = Path.home() / "humanoids/openarm_module/outputs/train/openarm_cube_to_box_v2/checkpoints/100000/pretrained_model"
-CAMERA_SERIAL  = "327122076093"
+POLICY_PATH = Path.home() / "humanoids/openarm_module/outputs/train/openarm_open_lab_door_v1/checkpoints/100000/pretrained_model"
+CAMERA_SERIAL  = "025222071898"
 WRIST_CAM_PATH = "/dev/video-wrist-right"
 NUM_TRIALS     = 10
 EPISODE_LENGTH = 40   # seconds
@@ -118,6 +118,12 @@ def make_robot_cfg():
                 'chest': RealSenseCameraConfig(
                     serial_number_or_name=CAMERA_SERIAL,
                     fps=FPS,
+                    width=848,
+                    height=480,
+                ),
+                'wrist_left': OpenCVCameraConfig(
+                    index_or_path='/dev/video-wrist-left',
+                    fps=FPS,
                     width=640,
                     height=480,
                 )
@@ -128,7 +134,7 @@ def make_robot_cfg():
             side='right',
             cameras={
                 'wrist_right': OpenCVCameraConfig(
-                    index_or_path=WRIST_CAM_PATH,
+                    index_or_path='/dev/video-wrist-right',
                     fps=FPS,
                     width=640,
                     height=480,
@@ -154,12 +160,14 @@ def run_policy_episode(robot, policy, episode_length, device, fps, pre_weights, 
             obs = robot.get_observation()
 
             state = np.array([obs[k] for k in STATE_KEYS], dtype=np.float32)
-            chest_image       = obs['left_chest'].astype(np.float32) / 255.0
+            chest_image      = obs['left_chest'].astype(np.float32) / 255.0
+            wrist_left_image = obs['left_wrist_left'].astype(np.float32) / 255.0
             wrist_right_image = obs['right_wrist_right'].astype(np.float32) / 255.0
 
             batch = {
                 'observation.state': torch.from_numpy(state).float().unsqueeze(0).to(device),
                 'observation.images.left_chest': torch.from_numpy(chest_image).permute(2, 0, 1).unsqueeze(0).to(device),
+                'observation.images.left_wrist_left': torch.from_numpy(wrist_left_image).permute(2, 0, 1).unsqueeze(0).to(device),
                 'observation.images.right_wrist_right': torch.from_numpy(wrist_right_image).permute(2, 0, 1).unsqueeze(0).to(device),
             }
 
