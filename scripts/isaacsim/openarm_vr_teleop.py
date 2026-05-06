@@ -66,7 +66,7 @@ LEFT_HOME_ROT  = quat_to_rot( 0.7071, -0.7071, 0.0, 0.0)
 RIGHT_HOME_ROT = quat_to_rot( 0.7071,  0.7071, 0.0, 0.0)
 
 # ─── Workspace scale ─────────────────────────────────────────────────────────
-WORKSPACE_SCALE = 0.6
+WORKSPACE_SCALE = 1.0
 
 # ─── XR Extensions ────────────────────────────────────────────────────────────
 XR_EXTENSIONS = [
@@ -140,24 +140,19 @@ def set_joint_deg(stage: Usd.Stage, joint_path: str, angle_deg: float):
     drive.GetDampingAttr().Set(100.0)
 
 
-def world_delta_to_robot(pos_delta: np.ndarray) -> np.ndarray:
-    """
-    Convert world-space position delta to robot-arm-base-frame delta.
-
-    Verified Quest 2 world axes:
-      world[0] x: your left(-) / right(+)
-      world[1] y: toward robot(-) / away(+)
-      world[2] z: down(-) / up(+)
-
-    Robot arm base frame:
-      robot[0]: forward (away from robot torso)
-      robot[1]: sideways
-      robot[2]: up
-    """
+def world_delta_to_robot_left(pos_delta: np.ndarray) -> np.ndarray:
     return np.array([
-        -pos_delta[2],   # robot forward  = world z (your up/down)
-        -pos_delta[1],   # robot sideways = world -y (your toward/away)
-        -pos_delta[0],   # robot up       = world x (your left/right)
+        -pos_delta[2],   # robot forward  = world z
+        -pos_delta[1],   # robot sideways = world -y
+        -pos_delta[0],   # robot up       = world x
+    ]) * WORKSPACE_SCALE
+
+
+def world_delta_to_robot_right(pos_delta: np.ndarray) -> np.ndarray:
+    return np.array([
+        -pos_delta[2],   # robot forward  = world z
+         pos_delta[1],   # robot sideways = world y (flipped)
+         pos_delta[0],   # robot up       = world x (flipped)
     ]) * WORKSPACE_SCALE
 
 
@@ -220,6 +215,37 @@ def solve_ik(solver, pos: np.ndarray, rot: np.ndarray):
         return np.degrees(result.solution.squeeze().cpu().numpy())
     return None
 
+def remap_rot(delta_rot: np.ndarray) -> np.ndarray:
+    """Remap controller rotation delta to robot frame."""
+    P = np.array([
+        [0,  0, 1],
+        [1,  0, 0],
+        [0,  1, 0],
+    ], dtype=float)
+    result = P @ delta_rot @ P.T
+
+    angle = np.arccos(np.clip((np.trace(result) - 1) / 2, -1, 1))
+    if abs(angle) < 1e-6:
+        return result
+
+    axis = np.array([
+        result[2, 1] - result[1, 2],
+        result[0, 2] - result[2, 0],
+        result[1, 0] - result[0, 1],
+    ]) / (2 * np.sin(angle))
+
+    # Negate Z (twist) and Y (left/right tilt)
+    axis[2] *= -1
+    axis[0] *= -1
+
+    c, s = np.cos(angle), np.sin(angle)
+    t = 1 - c
+    x, y, z = axis
+    return np.array([
+        [t*x*x + c,   t*x*y - s*z, t*x*z + s*y],
+        [t*x*y + s*z, t*y*y + c,   t*y*z - s*x],
+        [t*x*z - s*y, t*y*z + s*x, t*z*z + c  ],
+    ])
 
 def main():
     import os
@@ -306,7 +332,7 @@ def main():
                     print("Waiting for XR... (enable VR from XR tab)")
                 continue
 
-        if frame % 3 != 0:
+        if frame % 1 != 0:
             continue
 
         try:
@@ -348,15 +374,14 @@ def main():
             left_world_delta  = lpos - left_ref_pos
             right_world_delta = rpos - right_ref_pos
 
-            left_pos_delta  = world_delta_to_robot(left_world_delta)
-            right_pos_delta = world_delta_to_robot(right_world_delta)
+            left_pos_delta  = world_delta_to_robot_left(left_world_delta)
+            right_pos_delta = world_delta_to_robot_right(right_world_delta)
 
             # ── Rotation deltas ───────────────────────────────────────────
-            left_delta_rot  = lrot @ left_ref_rot.T
-            right_delta_rot = rrot @ right_ref_rot.T
-
-            left_target_rot  = LEFT_HOME_ROT  @ left_delta_rot
-            right_target_rot = RIGHT_HOME_ROT @ right_delta_rot
+            left_delta_rot   = lrot @ left_ref_rot.T
+            right_delta_rot  = rrot @ right_ref_rot.T
+            left_target_rot  = LEFT_HOME_ROT  @ remap_rot(left_delta_rot)
+            right_target_rot = RIGHT_HOME_ROT @ remap_rot(right_delta_rot)
 
             # ── Target EE positions ───────────────────────────────────────
             left_target_pos  = LEFT_HOME_POS  + left_pos_delta
