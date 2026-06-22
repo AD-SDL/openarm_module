@@ -98,6 +98,19 @@ The script knows per-asset whether to prep it as `dynamic` (tube, bucket — add
 | Tube rack | (-0.30, -0.20, 0.80) | Static fixture on the robot's right (-y) side; holds the tube |
 | Tube | (-0.30, -0.20, 0.90) | Starts above the rack, settles into a well; randomized ±5 cm xy + ±0.3 rad yaw on reset |
 | Bucket | (-0.20, 0.00, 0.85) | On the centre-line, reachable by either hand; receptacle for the task |
+| Chest camera | offset (0.08, 0, 0.55) from `openarm_body_link` | Intel RealSense D435-style RGB + depth, 640×480 @ 30 Hz, ~69° H-FOV. Not in obs by default — see notes below. |
+
+The OpenArm USD ships without a camera prim (the included `openarm_bimanual_sensor.usd` layer is an empty stub), so this package attaches a `CameraCfg` to `openarm_body_link` in the scene cfg. The camera rotates with the chest if the body link moves.
+
+**Pixel data is not in the policy observation by default** — adding it changes the observation space and would break any downstream IL configs trained against the current obs shape. To opt in, add to `ObservationsCfg.PolicyCfg`:
+
+```python
+chest_rgb = ObsTerm(func=mdp.image,
+                    params={"sensor_cfg": SceneEntityCfg("chest_camera"),
+                            "data_type": "rgb"})
+```
+
+When using the camera in **headless runs without livestream**, the rendering pipeline must be on — pass `--enable_cameras` on the launch command (livestream and GUI modes have rendering on already).
 
 ## Success criterion
 

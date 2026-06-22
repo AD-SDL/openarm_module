@@ -20,13 +20,12 @@ import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg, RigidObjectCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg
 from isaaclab.managers import ActionTermCfg as ActionTerm
-from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg
-from isaaclab.sensors import FrameTransformerCfg
+from isaaclab.sensors import CameraCfg, FrameTransformerCfg
 from isaaclab.sim.spawners.from_files.from_files_cfg import GroundPlaneCfg, UsdFileCfg
 from isaaclab.sim.spawners.meshes.meshes_cfg import MeshCuboidCfg
 from isaaclab.utils import configclass
@@ -54,14 +53,35 @@ class CentrifugeSceneCfg(InteractiveSceneCfg):
       * Ground plane at z=0.
       * Robot pedestal: 0.413 x 0.413 x 0.579 m cube centred at (-0.62, 0, 0.289)
         so its top is at z=0.578 (preserved from ``aiet_scene.usd``).
-      * Table: top at z=0.80 (~0.22 m above the robot base, so the shoulders sit
-        above the table top and the hands lower naturally onto it).
+      * Table: top at z=0.80, painted yellow for contrast against the props.
       * Robot base mounted on the pedestal top at (-0.62, 0, 0.5786).
       * Tube rack: static fixture on the table at (-0.35, -0.15, 0.80) on the
-        robot's right (-y) side — placed as close to the right hand as the
-        pedestal allows. The tube starts on top of the rack.
-      * Bucket: dynamic rigid body at (-0.20, 0.00, 0.85) on the centre-line,
-        receptacle for successful task completion.
+        robot's right (-y) side, rotated 90 deg CCW about +z so its long axis
+        runs along world y. The row of 4 large wells faces robot-centre (+y);
+        the row of 6 small wells faces -y. Painted black.
+      * Rack floor: invisible-by-design collision plate inside the rack
+        (the rack USD's wells are open through-bores), so the tube tip rests
+        inside the rack rather than dropping onto the table top.
+      * Tube: light-gray rigid body, starts inserted into the back-right large
+        well at (-0.332, -0.1425, 0.825). The tube body Ø is within ~0.1 mm of
+        the well bore Ø. Two cooperating fixes prevent friction lock:
+          1. The rack uses triangle-mesh collision and the bucket uses SDF
+             collision (instead of convexDecomposition) so the well bores are
+             faithfully empty in collision space -- convex decomp hulls would
+             otherwise intrude into the wells and block the tube body
+             regardless of clearance.
+          2. The tube's PhysX collision surface is shrunk by 1 mm
+             (``rest_offset = -0.001`` in ``collision_props``), giving ~1 mm
+             radial clearance through both rack and bucket wells. The wider
+             cap still collides with the rim as a real centrifuge tube does.
+      * Bucket: green rigid body at (-0.35, 0, 0.80) -- same depth as the rack,
+        on the robot's centre line. Forms an in-line layout with the rack along
+        world y so right-hand pick-from-rack + place-into-bucket is a short
+        translation.
+      * Chest camera: Intel RealSense D435-like sensor attached to
+        ``openarm_body_link`` so it travels with the robot torso. Pitched 45
+        deg down to frame the rack + bucket. Not wired into the policy obs by
+        default -- see the ``chest_camera`` field's docstring to opt in.
 
     The asymmetric layout (rack on -y, bucket on centre) reflects the
     "right hand picks first, then transports to centre" intended operation
@@ -111,30 +131,66 @@ class CentrifugeSceneCfg(InteractiveSceneCfg):
         spawn=MeshCuboidCfg(
             size=(1.0, 0.6, 0.80),
             collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True),
-            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.6, 0.5, 0.4)),
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.95, 0.85, 0.2)),
         ),
     )
 
-    # tube rack — static fixture sitting on the table; convexDecomposition
-    # collision (already authored in the USD) preserves the wells so the tube
-    # can be inserted. Placed on the robot's -y (right) side so the right hand
-    # operates first. Positions are starting values for in-sim tuning.
-    # x=-0.35 is the closest the rack can sit without intruding into the
-    # pedestal (+x face at -0.413, rack half-width 0.0625). y=-0.15 aligns
-    # with the right hand's y (-0.153) so the right arm can reach straight
-    # forward instead of obliquely.
+    # tube rack — static fixture sitting on the table. Collision approximation
+    # is set to ``triangleMesh`` inside the rack USD itself (see
+    # scripts/prepare_assets.py): a convex-hull or convex-decomp approximation
+    # cannot represent the well bores faithfully, since convex hulls can't
+    # have holes and the decomp hulls intrude into the wells, blocking the
+    # tube body regardless of any rest-offset clearance. Triangle mesh is
+    # only allowed on static bodies, which is fine here. Placed on the
+    # robot's -y (right) side so the right hand operates first. Rotated 90
+    # deg CCW about +z so the long axis points along world y; the row of 4
+    # large wells faces robot-centre (+y) and the row of 6 small wells faces
+    # away (-y). Painted black so the well openings read clearly.
     rack = AssetBaseCfg(
         prim_path="{ENV_REGEX_NS}/Rack",
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(-0.35, -0.15, 0.80), rot=(1.0, 0.0, 0.0, 0.0)),
-        spawn=UsdFileCfg(usd_path=f"{CENTRIFUGE_DATASET_DIR}/centrifuge_tube_rack.usd"),
+        init_state=AssetBaseCfg.InitialStateCfg(
+            pos=(-0.35, -0.15, 0.80),
+            rot=(0.7071068, 0.0, 0.0, 0.7071068),
+        ),
+        spawn=UsdFileCfg(
+            usd_path=f"{CENTRIFUGE_DATASET_DIR}/centrifuge_tube_rack.usd",
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.05, 0.05, 0.05)),
+        ),
     )
 
-    # plastic centrifuge tube (rigid) — sits on top of the rack at the same xy.
-    # Rack top surface is at z=0.878 (rack bottom 0.80 + height 0.078); tube
-    # height 0.122 → tube bottom rests on rack top with tube centre at 0.94.
+    # rack floor — invisible collision plate inside the rack. The rack USD's
+    # wells are open through-bores (no authored floor), so without this the
+    # tube tip would fall to the table top through the well. The plate is
+    # axis-aligned in world frame after the rack rotation: 82 mm (x) x 125 mm
+    # (y) x 5 mm (z), spanning the rack footprint. Painted to match the rack so
+    # it's hidden visually but provides the floor PhysX needs.
+    rack_floor = AssetBaseCfg(
+        prim_path="{ENV_REGEX_NS}/RackFloor",
+        init_state=AssetBaseCfg.InitialStateCfg(pos=(-0.35, -0.15, 0.8025), rot=(1.0, 0.0, 0.0, 0.0)),
+        spawn=MeshCuboidCfg(
+            size=(0.082, 0.125, 0.005),
+            collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True),
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.05, 0.05, 0.05)),
+        ),
+    )
+
+    # plastic centrifuge tube (rigid) — inserted into one of the four large
+    # wells of the rotated rack. Tube body Ø ~28.7 mm fits the well Ø ~29 mm
+    # (~0.05 mm raw clearance per side), which without intervention would
+    # friction-lock and make picking/placing impossible. We shrink the tube's
+    # PhysX collision surface by 1 mm via ``rest_offset = -0.001`` so the
+    # effective body Ø is ~26.7 mm — that gives ~1 mm radial clearance through
+    # the well bore for both the rack and bucket wells, but the cap (Ø ~35 mm)
+    # is still wider than the bore so it catches on the rim as intended.
+    # Tip rests on the rack_floor plate (top face z=0.805) at init; cap sits
+    # ~33 mm above the rack rim. xy = (-0.332, -0.1425) is the back-right
+    # large well in the rotated layout.
     tube = RigidObjectCfg(
         prim_path="{ENV_REGEX_NS}/Tube",
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(-0.35, -0.15, 0.94), rot=(1.0, 0.0, 0.0, 0.0)),
+        init_state=RigidObjectCfg.InitialStateCfg(
+            pos=(-0.332, -0.1425, 0.825),
+            rot=(0.7071068, 0.0, 0.0, 0.7071068),
+        ),
         spawn=UsdFileCfg(
             usd_path=f"{CENTRIFUGE_DATASET_DIR}/centrifuge_tube_big.usd",
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
@@ -146,14 +202,66 @@ class CentrifugeSceneCfg(InteractiveSceneCfg):
                 disable_gravity=False,
             ),
             mass_props=sim_utils.MassPropertiesCfg(mass=0.05),
+            collision_props=sim_utils.CollisionPropertiesCfg(
+                contact_offset=0.005,
+                rest_offset=-0.001,
+            ),
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.82, 0.82, 0.82)),
+        ),
+    )
+
+    # OpenArm chest camera — Intel RealSense D435-like sensor mounted on the
+    # robot's chest, looking forward at the work area. The OpenArm USD ships
+    # without a camera prim authored (the ``openarm_bimanual_sensor.usd``
+    # layer is a stub), so we attach one here as a child of openarm_body_link.
+    # If the body link ever rotates, the camera moves with it.
+    #
+    # Pose is approximate — front face of upper chest, looking forward (+x in
+    # robot body frame). Tune in-sim after seeing the camera frustum.
+    #
+    # Notes:
+    #  * The camera's pixel output is NOT wired into the policy observation
+    #    by default (would change obs shape and break downstream IL configs).
+    #    To use it: add an ObsTerm like
+    #        chest_rgb = ObsTerm(func=mdp.image,
+    #                            params={"sensor_cfg": SceneEntityCfg("chest_camera"),
+    #                                    "data_type": "rgb"})
+    #  * Cameras render only when the render pipeline is active. For headless
+    #    runs without livestream, pass ``--enable_cameras``.
+    #  * Intrinsics target ~69 deg horizontal FOV (RealSense D435 color stream
+    #    in 4:3 mode). Tune ``focal_length`` to change FOV.
+    chest_camera = CameraCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/openarm_body_link/chest_camera",
+        update_period=0.0333,  # ~30 Hz, matches RealSense default
+        height=480,
+        width=640,
+        data_types=["rgb", "distance_to_image_plane"],
+        spawn=sim_utils.PinholeCameraCfg(
+            focal_length=15.25,
+            focus_distance=400.0,
+            horizontal_aperture=20.955,
+            clipping_range=(0.05, 5.0),
+        ),
+        offset=CameraCfg.OffsetCfg(
+            pos=(0.08, 0.0, 0.55),   # 8 cm forward of body axis, mid-chest height
+            # Pitched 45 deg downward (rotation about +y by +45 deg) so the
+            # frustum covers the centrifuge bucket (~0.34 m forward, ~0.28 m
+            # below the camera) and the tube on the rack. Quaternion is
+            # (cos 22.5, 0, sin 22.5, 0).
+            rot=(0.9238795, 0.0, 0.3826834, 0.0),
+            convention="world",       # forward = +x (robot body frame), up = +z
         ),
     )
 
     # centrifuge bucket (rigid — heavy enough to act as a stable receptacle).
-    # Placed on the robot's centre-line at ~0.42 m xy from the base.
+    # Sits on the table at the same x as the rack (-0.35), centred on the
+    # robot's y axis. The bucket extends the rack's rotated long axis toward
+    # the robot's centre, so right-hand pick-and-place from rack to bucket is
+    # a short y-translation. Bucket mesh origin is at its bottom -> z=0.80
+    # places it flush on the table top.
     bucket = RigidObjectCfg(
         prim_path="{ENV_REGEX_NS}/Bucket",
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(-0.20, 0.00, 0.85), rot=(1.0, 0.0, 0.0, 0.0)),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(-0.35, 0.0, 0.80), rot=(1.0, 0.0, 0.0, 0.0)),
         spawn=UsdFileCfg(
             usd_path=f"{CENTRIFUGE_DATASET_DIR}/centrifuge_bucket_big.usd",
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
@@ -165,6 +273,13 @@ class CentrifugeSceneCfg(InteractiveSceneCfg):
                 disable_gravity=False,
             ),
             mass_props=sim_utils.MassPropertiesCfg(mass=0.5),
+            # Collision approximation is set to ``sdf`` inside the bucket USD
+            # itself (see scripts/prepare_assets.py): convexHull or convex
+            # decomposition cannot represent the wells, and SDF is the only
+            # approximation valid for dynamic bodies that preserves concave
+            # geometry. Without this the wells would be filled and the tube
+            # could not be inserted.
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.2, 0.7, 0.25)),
         ),
     )
 
@@ -237,24 +352,6 @@ class ObservationsCfg:
 
 
 @configclass
-class EventCfg:
-    """Reset events — randomize the tube within a small region on each reset."""
-
-    randomize_tube_pose = EventTerm(
-        func=mdp.reset_object_uniform,
-        mode="reset",
-        params={
-            "asset_cfg": SceneEntityCfg("tube"),
-            "pose_range": {
-                "x": (-0.05, 0.05),
-                "y": (-0.05, 0.05),
-                "yaw": (-0.3, 0.3),
-            },
-        },
-    )
-
-
-@configclass
 class TerminationsCfg:
     """Termination terms."""
 
@@ -287,12 +384,12 @@ class CentrifugeEnvCfg(ManagerBasedRLEnvCfg):
     actions: ActionsCfg = ActionsCfg()
     # MDP
     terminations: TerminationsCfg = TerminationsCfg()
-    events: EventCfg = EventCfg()
 
     # unused managers
     commands = None
     rewards = None
     curriculum = None
+    events = None
 
     def __post_init__(self):
         # general settings

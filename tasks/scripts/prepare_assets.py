@@ -50,7 +50,10 @@ class _AssetSpec:
 # Authoritative list of bundled assets and how each should be prepared.
 ASSETS: tuple[_AssetSpec, ...] = (
     _AssetSpec("centrifuge_tube_big.usd", "dynamic"),
-    _AssetSpec("centrifuge_bucket_big.usd", "dynamic"),
+    # Bucket has wells, so convexHull would fill them and block the tube. SDF
+    # is the only approximation valid for dynamic bodies that preserves
+    # concave geometry, so we use the dedicated dynamic_sdf mode.
+    _AssetSpec("centrifuge_bucket_big.usd", "dynamic_sdf"),
     # Rack is a static fixture; triangleMesh preserves the concave wells so
     # tubes can actually be inserted (a convex hull would fill them in).
     _AssetSpec("centrifuge_tube_rack.usd", "static"),
@@ -89,9 +92,7 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _apply_dynamic(stage_root, usd_physics, physx_schema) -> None:
-    from pxr import Usd  # noqa: PLC0415
-
+def _ensure_dynamic_root_apis(stage_root, usd_physics, physx_schema) -> None:
     if not stage_root.HasAPI(usd_physics.RigidBodyAPI):
         usd_physics.RigidBodyAPI.Apply(stage_root)
         print(f"  + RigidBodyAPI on {stage_root.GetPath()}")
@@ -102,19 +103,14 @@ def _apply_dynamic(stage_root, usd_physics, physx_schema) -> None:
         physx_schema.PhysxRigidBodyAPI.Apply(stage_root)
         print(f"  + PhysxRigidBodyAPI on {stage_root.GetPath()}")
 
-    n = 0
-    for prim in Usd.PrimRange(stage_root):
-        if prim.GetTypeName() != "Mesh":
-            continue
-        if not prim.HasAPI(usd_physics.CollisionAPI):
-            usd_physics.CollisionAPI.Apply(prim)
-        if not prim.HasAPI(usd_physics.MeshCollisionAPI):
-            usd_physics.MeshCollisionAPI.Apply(prim).CreateApproximationAttr().Set("convexHull")
-        n += 1
-    print(f"  + CollisionAPI(convexHull) on {n} mesh(es)")
 
+def _set_mesh_collision(stage_root, usd_physics, approximation: str) -> int:
+    """Apply CollisionAPI + MeshCollisionAPI to every Mesh under ``stage_root``
+    and force the approximation to ``approximation``.
 
-def _apply_static(stage_root, usd_physics, _physx_schema) -> None:
+    Idempotent — always overwrites the approximation attribute so re-running
+    the prep script after a change to the spec actually takes effect.
+    """
     from pxr import Usd  # noqa: PLC0415
 
     n = 0
@@ -123,9 +119,40 @@ def _apply_static(stage_root, usd_physics, _physx_schema) -> None:
             continue
         if not prim.HasAPI(usd_physics.CollisionAPI):
             usd_physics.CollisionAPI.Apply(prim)
-        if not prim.HasAPI(usd_physics.MeshCollisionAPI):
-            usd_physics.MeshCollisionAPI.Apply(prim).CreateApproximationAttr().Set("triangleMesh")
+        mca = (
+            usd_physics.MeshCollisionAPI(prim)
+            if prim.HasAPI(usd_physics.MeshCollisionAPI)
+            else usd_physics.MeshCollisionAPI.Apply(prim)
+        )
+        attr = mca.GetApproximationAttr() or mca.CreateApproximationAttr()
+        attr.Set(approximation)
         n += 1
+    return n
+
+
+def _apply_dynamic(stage_root, usd_physics, physx_schema) -> None:
+    _ensure_dynamic_root_apis(stage_root, usd_physics, physx_schema)
+    n = _set_mesh_collision(stage_root, usd_physics, "convexHull")
+    print(f"  + CollisionAPI(convexHull) on {n} mesh(es)")
+
+
+def _apply_dynamic_sdf(stage_root, usd_physics, physx_schema) -> None:
+    """Same as dynamic, but uses SDF (signed distance field) collision so the
+    mesh's concave features (e.g. bucket wells) are preserved. SDF is the only
+    PhysX approximation valid for dynamic bodies that supports concavity.
+    """
+    from pxr import Usd  # noqa: PLC0415
+
+    _ensure_dynamic_root_apis(stage_root, usd_physics, physx_schema)
+    n = _set_mesh_collision(stage_root, usd_physics, "sdf")
+    for prim in Usd.PrimRange(stage_root):
+        if prim.GetTypeName() == "Mesh":
+            physx_schema.PhysxSDFMeshCollisionAPI.Apply(prim)
+    print(f"  + CollisionAPI(sdf) on {n} mesh(es)")
+
+
+def _apply_static(stage_root, usd_physics, _physx_schema) -> None:
+    n = _set_mesh_collision(stage_root, usd_physics, "triangleMesh")
     print(f"  + CollisionAPI(triangleMesh) on {n} mesh(es)")
 
 
@@ -149,6 +176,8 @@ def _prepare_one(spec: _AssetSpec, src_dir: str, dst_dir: str, usd_physics, phys
 
     if spec.mode == "dynamic":
         _apply_dynamic(root, usd_physics, physx_schema)
+    elif spec.mode == "dynamic_sdf":
+        _apply_dynamic_sdf(root, usd_physics, physx_schema)
     elif spec.mode == "static":
         _apply_static(root, usd_physics, physx_schema)
     else:
