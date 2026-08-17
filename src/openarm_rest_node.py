@@ -7,6 +7,7 @@ from madsci.common.types.action_types import ActionFailed
 from madsci.common.types.node_types import RestNodeConfig
 from madsci.node_module.helpers import action
 from madsci.node_module.rest_node_module import RestNode
+from madsci.common.types.location_types import LocationArgument
 from lerobot.configs.dataset import DatasetRecordConfig
 from pathlib import Path
 
@@ -52,26 +53,12 @@ class OpenArmNode(RestNode):
 
     def state_handler(self) -> None:
         """Periodically called to update the current state of the node."""
-        if self.robot is not None:
-            try:
-                state = self.robot.getJ()
-                self.node_state = {
-                    "right_arm": {
-                        "positions":  state["right"]["positions"],
-                        "velocities": state["right"]["velocities"],
-                        "torques":    state["right"]["torques"],
-                        "gripper":    state["right"]["gripper"],
-                    },
-                    "left_arm": {
-                        "positions":  state["left"]["positions"],
-                        "velocities": state["left"]["velocities"],
-                        "torques":    state["left"]["torques"],
-                        "gripper":    state["left"]["gripper"],
-                    },
-                }
-            except Exception as err:
-                self.logger.log_error(f"Error reading arm state: {err}")
-
+        try:
+            if self.robot is not None:
+                return self.robot.get_observation()
+        except Exception as err:
+                    self.logger.log_error(f"Error shutting down the OpenArm Node: {err}")
+                    raise err
     # ------------------------------------------------------------------
     # Actions
     # ------------------------------------------------------------------
@@ -95,79 +82,24 @@ class OpenArmNode(RestNode):
             return ActionFailed(errors=[f"Home failed: {err}"])
         return None
 
-    @action(name="moveJ", description="Move one or both arms to specified joint configurations.")
-    def moveJ(
+    @action(name="move_t", description="Move one or both arms to specified joint configurations.")
+    def move_to_location(
         self,
-        right_angles: Annotated[
-            Optional[list[float]],
-            "7-element list of target joint positions in radians for the right arm. Pass null to skip.",
-        ] = None,
-        left_angles: Annotated[
-            Optional[list[float]],
-            "7-element list of target joint positions in radians for the left arm. Pass null to skip.",
-        ] = None,
-        right_gripper: Annotated[float, "Right gripper target position in radians."] = 0.0,
-        left_gripper: Annotated[float, "Left gripper target position in radians."] = 0.0,
+        location: Annotated[LocationArgument, "target location"],
         speed: Annotated[Optional[float], "Motion speed [0.0-1.0]. 0 = slowest, 1 = fastest. Defaults to interface default."] = None,
     ) -> Optional[ActionFailed]:
         """Move one or both arms to the specified joint configuration using cosine easing."""
+        left_angles = location.representation["left_angles"]
+        right_angles = location.representation["right_angles"]
         if right_angles is None and left_angles is None:
             return ActionFailed(errors=["At least one of right_angles or left_angles must be provided."])
-        try:
-            kwargs = {
-                "right_angles": right_angles,
-                "left_angles": left_angles,
-                "right_gripper": right_gripper,
-                "left_gripper": left_gripper,
-            }
-            if speed is not None:
-                kwargs["speed"] = speed
-            self.robot.moveJ(**kwargs)
-        except ValueError as err:
-            return ActionFailed(errors=[f"Invalid joint angles: {err}"])
-        except Exception as err:
-            return ActionFailed(errors=[f"moveJ failed: {err}"])
+        self.robot.move_arms_to_target(right_angles, left_angles, speed)
         return None
 
-    @action(name="getJ", description="Read current joint state from one or both arms.")
-    def getJ(
-        self,
-        right: Annotated[bool, "Read right arm state."] = True,
-        left: Annotated[bool, "Read left arm state."] = True,
-    ) -> dict:
-        """Return current joint positions, velocities, and torques for one or both arms."""
-        try:
-            return self.robot.getJ(right=right, left=left)
-        except Exception as err:
-            return ActionFailed(errors=[f"getJ failed: {err}"])
+    def replay(self, repo_id: str, episode: int, fps: int = 30):
+        self.robot.replay_example(repo_id, episode, self.config.dataset_root, fps)
 
-    @action(
-        name="moveL",
-        description="[STUB] Move end-effector to a Cartesian pose. Not yet implemented - requires IK.",
-    )
-    def moveL(
-        self,
-        right_pose: Annotated[
-            Optional[list[float]],
-            "[x, y, z, roll, pitch, yaw] target pose for the right arm in metres/radians.",
-        ] = None,
-        left_pose: Annotated[
-            Optional[list[float]],
-            "[x, y, z, roll, pitch, yaw] target pose for the left arm in metres/radians.",
-        ] = None,
-        speed: Annotated[Optional[float], "Motion speed [0.0-1.0]."] = None,
-    ) -> ActionFailed:
-        """Not yet implemented - requires an IK solver (e.g. pinocchio + OpenArm URDF)."""
-        return ActionFailed(errors=["moveL is not yet implemented. An IK solver is required."])
-
-    @action(
-        name="getL",
-        description="[STUB] Get end-effector Cartesian pose. Not yet implemented - requires FK.",
-    )
-    def getL(self) -> ActionFailed:
-        """Not yet implemented - requires a forward kinematics model."""
-        return ActionFailed(errors=["getL is not yet implemented. A forward kinematics model is required."])
-
+   
     # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------

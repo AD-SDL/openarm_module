@@ -198,6 +198,8 @@ class OpenArmBimanual:
         if left:
             result["left"] = self.get_left_position()
         return result
+    def get_observation(self):
+        return self.arms.get_observation()
 
     def replay_example(self, repo_id: str, episode: int, repo_path: Path, fps: int = 30):
         dataset_config = DatasetReplayConfig(repo_id = repo_id, episode=episode, root=repo_path, fps=fps)
