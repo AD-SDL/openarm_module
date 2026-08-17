@@ -7,6 +7,8 @@ from madsci.common.types.action_types import ActionFailed
 from madsci.common.types.node_types import RestNodeConfig
 from madsci.node_module.helpers import action
 from madsci.node_module.rest_node_module import RestNode
+from lerobot.configs.dataset import DatasetRecordConfig
+from pathlib import Path
 
 from openarm_interface.openarm_interface import OpenArmBimanual
 
@@ -18,6 +20,7 @@ class OpenArmNodeConfig(RestNodeConfig):
     """CAN interface for the right arm."""
     left_can: str = "can1"
     """CAN interface for the left arm."""
+    dataset_root: Path
 
 
 class OpenArmNode(RestNode):

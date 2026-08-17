@@ -13,6 +13,7 @@ dependencies = [
     "madsci-node-module~=0.6.1",
     "madsci-client~=0.6.1",
     "madsci-common~=0.6.1",
+    "lerobot>=0.4.4",
 ]
 requires-python = ">=3.10"
 readme = "README.md"
