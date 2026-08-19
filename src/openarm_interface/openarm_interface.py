@@ -15,7 +15,7 @@ Supported methods:
 Speed parameter (0.0–1.0):
     Motion duration is interpolated between MAX_MOVE_DURATION (slow, speed=0)
     and MIN_MOVE_DURATION (fast, speed=1). All moves use cosine easing so the
-    arm accelerates and decelerates smoothly rather than jumping to target.
+aaa    arm accelerates and decelerates smoothly rather than jumping to target.
 """
 
 import time
