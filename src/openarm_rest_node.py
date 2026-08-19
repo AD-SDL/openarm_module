@@ -8,7 +8,6 @@ from madsci.common.types.node_types import RestNodeConfig
 from madsci.node_module.helpers import action
 from madsci.node_module.rest_node_module import RestNode
 from madsci.common.types.location_types import LocationArgument
-from lerobot.configs.dataset import DatasetRecordConfig
 from pathlib import Path
 
 from openarm_interface.openarm_interface import OpenArmBimanual
@@ -95,8 +94,9 @@ class OpenArmNode(RestNode):
             return ActionFailed(errors=["At least one of right_angles or left_angles must be provided."])
         self.robot.move_arms_to_target(right_angles, left_angles, speed)
         return None
-
-    def replay(self, repo_id: str, episode: int, fps: int = 30):
+    @action
+    def replay(self, repo_id: Annotated[str, "lerobot repo id for the episode"], episode: Annotated[int, "lerobot episode number to replay"], fps: int = 30) -> None:
+        """replay a pretrained teleop trajectory"""
         self.robot.replay_example(repo_id, episode, self.config.dataset_root, fps)
 
    
@@ -142,13 +142,6 @@ class OpenArmNode(RestNode):
         except Exception as err:
             self.logger.log_error(f"Error during safety stop: {err}")
         self.logger.log("Node stopped.")
-        return True
-
-    def cancel(self) -> None:
-        """Cancel the current action."""
-        self.logger.log("Canceling node...")
-        self.node_status.cancelled = True
-        self.logger.log("Node cancelled.")
         return True
 
 
