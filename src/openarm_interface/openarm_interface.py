@@ -98,8 +98,8 @@ class OpenArmBimanual:
         kp: list[float] | None = DEFAULT_KP,
         kd: list[float] | None = DEFAULT_KD,
     ):
-       left_config = OpenArmFollowerConfig(can_interface=left_can, position_kp=kp, position_kd=kd)
-       right_config = OpenArmFollowerConfig(can_interface=right_can, position_kp=kp, position_kd=kd)
+       left_config = OpenArmFollowerConfig(port=left_can, position_kp=kp, position_kd=kd)
+       right_config = OpenArmFollowerConfig(port=right_can, position_kp=kp, position_kd=kd)
        self.bimanual_config = BiOpenArmFollowerConfig(right_arm_config=right_config, left_arm_config=left_config)
        self.arms = BiOpenArmFollower(self.bimanual_config)
     def initialize(self):
