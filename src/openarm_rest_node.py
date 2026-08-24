@@ -99,7 +99,9 @@ class OpenArmNode(RestNode):
         """replay a pretrained teleop trajectory"""
         self.robot.replay_example(repo_id, episode, self.config.dataset_root, fps)
 
-   
+    @action
+    def rollout(self, policy_path: str, task: str, duration: int) -> None:
+        self.robot.rollout(policy_path, task, duration)
     # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------

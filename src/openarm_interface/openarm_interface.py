@@ -23,6 +23,7 @@ import numpy as np
 from lerobot.robots.bi_openarm_follower import BiOpenArmFollower, BiOpenArmFollowerConfig
 from lerobot.robots.openarm_follower import OpenArmFollowerConfig, OpenArmFollower
 from lerobot.scripts.lerobot_replay import replay, ReplayConfig, DatasetReplayConfig
+from lerobot.scripts.lerobot_rollout import rollout, RolloutConfig
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -205,6 +206,10 @@ class OpenArmBimanual:
         dataset_config = DatasetReplayConfig(repo_id = repo_id, episode=episode, root=repo_path, fps=fps)
         replay_config = ReplayConfig(robot = self.bimanual_config, dataset=dataset_config)
         replay(replay_config)
+
+    def rollout(self, policy_path: str, task: str, duration: int):
+        rollout_config = RolloutConfig(robot=self.bimanual_config, policy_path=policy_path, task=task, duration=duration)
+        rollout(rollout_config)
 
 # ---------------------------------------------------------------------------
 # Example usage
