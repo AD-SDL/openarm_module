@@ -23,7 +23,8 @@ import numpy as np
 from lerobot.robots.bi_openarm_follower import BiOpenArmFollower, BiOpenArmFollowerConfig
 from lerobot.robots.openarm_follower import OpenArmFollowerConfig, OpenArmFollower
 from lerobot.scripts.lerobot_replay import replay, ReplayConfig, DatasetReplayConfig
-from lerobot.scripts.lerobot_rollout import rollout, RolloutConfig
+from openarm_interface.rollout_command import rollout
+from openarm_interface.rollout_config import RolloutConfig
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
