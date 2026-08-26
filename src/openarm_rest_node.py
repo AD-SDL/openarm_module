@@ -88,8 +88,15 @@ class OpenArmNode(RestNode):
         speed: Annotated[Optional[float], "Motion speed [0.0-1.0]. 0 = slowest, 1 = fastest. Defaults to interface default."] = None,
     ) -> Optional[ActionFailed]:
         """Move one or both arms to the specified joint configuration using cosine easing."""
-        left_angles = location.representation["left_angles"]
-        right_angles = location.representation["right_angles"]
+        left_target = {
+                    key.removeprefix("left_"): value for key, value in location.representation.items() if key.startswith("left_")
+                }
+                # Remove "right_" prefix
+        right_target = {
+                    key.removeprefix("right_"): value for key, value in location.representation.items() if key.startswith("right_")
+                }
+        left_angles = list(left_target.values()) if left_target else None
+        right_angles = list(right_target.values()) if right_target else None
         if right_angles is None and left_angles is None:
             return ActionFailed(errors=["At least one of right_angles or left_angles must be provided."])
         self.robot.move_arms_to_target(right_angles, left_angles, speed)
