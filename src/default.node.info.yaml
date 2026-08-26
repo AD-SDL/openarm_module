@@ -116,6 +116,37 @@ actions:
     accepts_var_kwargs: false
     var_args_schema: null
     var_kwargs_schema: null
+  rollout:
+    name: rollout
+    description: ''
+    args:
+      policy_path:
+        name: policy_path
+        description: ''
+        argument_type: str
+        required: true
+        default: null
+      task:
+        name: task
+        description: ''
+        argument_type: str
+        required: true
+        default: null
+      duration:
+        name: duration
+        description: ''
+        argument_type: int
+        required: true
+        default: null
+    locations: {}
+    files: {}
+    results: {}
+    blocking: true
+    asynchronous: true
+    accepts_var_args: false
+    accepts_var_kwargs: false
+    var_args_schema: null
+    var_kwargs_schema: null
 config:
   node_definition: default.node.yaml
   node_info_path: null
@@ -133,7 +164,7 @@ config:
   rate_limit_cleanup_interval: 300
   right_can: can0
   left_can: can1
-  dataset_root: '0'
+  dataset_root: .
 config_schema:
   description: Configuration for the OpenArm node module.
   properties:
