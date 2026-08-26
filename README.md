@@ -270,7 +270,7 @@ lerobot-teleoperate \
     --robot.right_arm_config.position_kp="[240,240,120,40,24,31,25,5]" \
     --robot.right_arm_config.position_kd="[5,5,1.5,0.3,0.3,0.3,0.3,0.05]" \
     --display_data=true \
-    --display_mode=foxglove
+    --display_mode="foxglove"
 ```
 Note: 
 The default display mode overloads the memory, switching to foxglove seems to fix this. 
@@ -295,7 +295,7 @@ The default display mode overloads the memory, switching to foxglove seems to fi
 **Teleop system crashes after running for too long, showing packet drops**
  - Usually occurs when `--display-data` flag is true
  - Check memory usage using `htop`, if it is growing without bound, the backend is the issues
- - adding `--display-mode=foxglove` switches the backend display script to one that uses memory better
+ - adding `--display-mode="foxglove"` switches the backend display script to one that uses memory better
  - Check memory usage again using `htop`, if it is no longer growing without bound, the issue should be resolved
 
 ## Recording Demonstrations
