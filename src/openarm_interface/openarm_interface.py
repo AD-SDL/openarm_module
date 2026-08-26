@@ -72,7 +72,9 @@ def _cosine_interpolate(start: np.ndarray, end: np.ndarray, time_steps: list[flo
     progress in [0.0, 1.0]. Matches the zero-return profile in the teleop code.
     """
     steps = []
-    for progress in time_steps:
+    start = np.array(start)
+    end = np.array(end)
+    for progress in enumerate(time_steps):
         t = 0.5 - 0.5 * np.cos(progress * np.pi)
         steps.append(start + t * (end - start))
     return steps
@@ -159,7 +161,7 @@ class OpenArmBimanual:
        
         if right_list:
             arms.append(self.arms.right_arm)
-            paths.append(_cosine_interpolate(self.get_left_position(), right_list, time_steps))
+            paths.append(_cosine_interpolate(self.get_right_position(), right_list, time_steps))
                    
         duration = _speed_to_duration(speed)
         steps = max(1, int(duration * CONTROL_RATE_HZ))
