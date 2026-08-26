@@ -86,7 +86,7 @@ If the arms move to awkward or asymmetric positions, proceed with recalibration.
 
 ### Recalibrate Hardware (Only if needed)
 
-**WARNING**: This will overwrite the existing calibration. Only do this if verification above failed.
+**WARNING**: This will move the robot, and will overwrite the existing calibration. Only do this if verification above failed.
 
 ```bash
 # Calibrate follower right arm (can0)
