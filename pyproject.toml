@@ -15,7 +15,7 @@ dependencies = [
     "madsci-common~=0.6.1",
     "lerobot>=0.4.4",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 readme = "README.md"
 license = {text = "MIT"}
 
