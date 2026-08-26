@@ -510,18 +510,19 @@ openarm-can-diagnosis --canport can0
 If arms don't return to correct zero position:
 
 1. **Re-run hardware calibration:**
+   Warning: THIS WILL MOVE THE ROBOT
    ```bash
    openarm-can-zero-position-calibration --canport can0 --arm-side right_arm
    openarm-can-zero-position-calibration --canport can1 --arm-side left_arm
    ```
 
-2. **Delete LeRobot calibration and re-sync:**
+3. **Delete LeRobot calibration and re-sync:**
    ```bash
    rm -rf ~/.cache/huggingface/lerobot/calibration/
    python scripts/sync_calibration.py
    ```
 
-3. **Verify zero position:**
+4. **Verify zero position:**
    ```bash
    python scripts/move_to_zero.py
    ```
