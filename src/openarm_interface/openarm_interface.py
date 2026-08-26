@@ -152,14 +152,14 @@ class OpenArmBimanual:
         arms = []
         starts = []
         paths = []
-        time_steps = np.linspace(0.0, 1.0, num=CONTROL_RATE_HZ * _speed_to_duration(speed))
+        time_steps = np.linspace(0.0, 1.0, num=int(CONTROL_RATE_HZ * _speed_to_duration(speed)))
         if left_list:
             arms.append(self.arms.left_arm)
             paths.append(_cosine_interpolate(self.get_left_position(), left_list, time_steps))
        
         if right_list:
             arms.append(self.arms.right_arm)
-            paths.append(_cosine_interpolate(self.get_left_position(), right_list))
+            paths.append(_cosine_interpolate(self.get_left_position(), right_list, time_steps))
                    
         duration = _speed_to_duration(speed)
         steps = max(1, int(duration * CONTROL_RATE_HZ))
