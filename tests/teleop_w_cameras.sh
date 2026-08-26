@@ -4,7 +4,7 @@
 source ~/humanoids/lerobot_env/bin/activate
 
 v4l2-ctl --device=/dev/video-wrist-left --set-fmt-video=width=640,height=480,pixelformat=MJPG
-v4l2-ctl --device=/dev/video8 --set-fmt-video=width=640,height=480,pixelformat=MJPG
+v4l2-ctl --device=/dev/video2 --set-fmt-video=width=640,height=480,pixelformat=MJPG
 
 lerobot-teleoperate \
     --robot.type=bi_openarm_follower \
@@ -17,7 +17,7 @@ lerobot-teleoperate \
     --robot.right_arm_config.port=can0 \
     --robot.right_arm_config.side=right \
     --robot.right_arm_config.cameras="{ \
-        wrist_right: {type: opencv, index_or_path: /dev/video-wrist-right, width: 640, height: 480, fps: 30, fourcc: MJPG} \
+        wrist_right: {type: opencv, index_or_path: /dev/video2, width: 640, height: 480, fps: 30, fourcc: MJPG} \
     }" \
     --robot.id=my_bimanual_follower \
     --teleop.type=bi_openarm_leader \

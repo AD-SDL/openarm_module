@@ -153,7 +153,7 @@ config:
   update_node_files: true
   status_update_interval: 2.0
   state_update_interval: 2.0
-  node_url: http://127.0.0.1:2000/
+  node_url: http://hal9000.cels.anl.gov:2000/
   uvicorn_kwargs:
     limit_concurrency: 10
   enable_rate_limiting: true

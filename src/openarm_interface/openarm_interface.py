@@ -135,7 +135,7 @@ class OpenArmBimanual:
         robot_command = {}
         for index, motor in enumerate(arm.bus.motors.keys()):
             robot_command[f"{motor}.pos"] = position[index]
-        return arm.send_action(position)
+        return arm.send_action(robot_command)
             
     def move_arms_to_target(self, right_list: list[float] | None = None, left_list: list[float] | None = None, speed: float = DEFAULT_SPEED):
         """
