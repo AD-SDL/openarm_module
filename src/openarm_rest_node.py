@@ -52,6 +52,7 @@ class OpenArmNode(RestNode):
 
     def state_handler(self) -> None:
         """Periodically called to update the current state of the node."""
+        print(self.robot)
         try:
             if self.robot is not None:
                 return self.robot.get_observation()
