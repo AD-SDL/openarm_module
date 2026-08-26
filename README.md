@@ -292,7 +292,7 @@ The default display mode overloads the memory, switching to foxglove seems to fi
 - Lower values = slower movement
 - Higher values = faster movement
 
-**teleop system crashes after running for too long, showing packet drops**
+**Teleop system crashes after running for too long, showing packet drops**
  - Usually occurs when `--display-data` flag is true
  - Check memory usage using `htop`, if it is growing without bound, the backend is the issues
  - adding `--display-mode=foxglove` switches the backend display script to one that uses memory better
