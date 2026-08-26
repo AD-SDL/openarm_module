@@ -133,7 +133,7 @@ config:
   rate_limit_cleanup_interval: 300
   right_can: can0
   left_can: can1
-  dataset_root: '='
+  dataset_root: '0'
 config_schema:
   description: Configuration for the OpenArm node module.
   properties:
