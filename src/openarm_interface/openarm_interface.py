@@ -23,7 +23,8 @@ import numpy as np
 from lerobot.robots.bi_openarm_follower import BiOpenArmFollower, BiOpenArmFollowerConfig
 from lerobot.robots.openarm_follower import OpenArmFollowerConfig, OpenArmFollower
 from lerobot.scripts.lerobot_replay import replay, ReplayConfig, DatasetReplayConfig
-from lerobot.scripts.lerobot_rollout import rollout, RolloutConfig
+from openarm_interface.rollout_command import rollout
+from openarm_interface.rollout_config import RolloutConfig
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -135,7 +136,7 @@ class OpenArmBimanual:
         robot_command = {}
         for index, motor in enumerate(arm.bus.motors.keys()):
             robot_command[f"{motor}.pos"] = position[index]
-        return arm.send_action(position)
+        return arm.send_action(robot_command)
             
     def move_arms_to_target(self, right_list: list[float] | None = None, left_list: list[float] | None = None, speed: float = DEFAULT_SPEED):
         """
