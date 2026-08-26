@@ -298,6 +298,11 @@ The default display mode overloads the memory, switching to foxglove seems to fi
  - adding `--display-mode="foxglove"` switches the backend display script to one that uses memory better
  - Check memory usage again using `htop`, if it is no longer growing without bound, the issue should be resolved
 
+**Cameras not connecting**
+- Cameras will change port when plug is adjusted, unfortunately they do not have unique serial numbers or ids
+- Run `v4l2-ctl --list-device` to find the video device address, e.g. `/dev/video0`
+- replace `/dev/video-right-wrist` or `/dev/video-left-wrist` with the new device address in the command
+
 ## Recording Demonstrations
 
 ### Gamepad Recording
