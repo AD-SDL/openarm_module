@@ -269,9 +269,11 @@ lerobot-teleoperate \
     --robot.left_arm_config.position_kd="[5,5,1.5,0.3,0.3,0.3,0.3,0.05]" \
     --robot.right_arm_config.position_kp="[240,240,120,40,24,31,25,5]" \
     --robot.right_arm_config.position_kd="[5,5,1.5,0.3,0.3,0.3,0.3,0.05]" \
-    --display_data=true
+    --display_data=true \
+    --display_mode=foxglove
 ```
-
+Note: 
+The default display mode overloads the memory, switching to foxglove seems to fix this. 
 **Tuning notes:**
 - `teleop` kp/kd values control leader arm stiffness — lower values make the leader easier to backdrive
 - `robot` kp/kd values control follower arm responsiveness
