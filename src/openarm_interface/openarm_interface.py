@@ -74,7 +74,7 @@ def _cosine_interpolate(start: np.ndarray, end: np.ndarray, time_steps: list[flo
     steps = []
     start = np.array(start)
     end = np.array(end)
-    for progress in enumerate(time_steps):
+    for progress in time_steps:
         t = 0.5 - 0.5 * np.cos(progress * np.pi)
         steps.append(start + t * (end - start))
     return steps
