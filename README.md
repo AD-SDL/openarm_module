@@ -274,6 +274,8 @@ lerobot-teleoperate \
 ```
 Note: 
 The default display mode overloads the memory, switching to foxglove seems to fix this. 
+
+
 **Tuning notes:**
 - `teleop` kp/kd values control leader arm stiffness — lower values make the leader easier to backdrive
 - `robot` kp/kd values control follower arm responsiveness
