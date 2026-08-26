@@ -131,7 +131,7 @@ class OpenArmBimanual:
     def get_both_positions(self):
         return{"left_postion": self.get_left_position, "right_position": self.get_right_position}
     
-    def send_command(arm: OpenArmFollower, position: list[float]):
+    def send_command(self, arm: OpenArmFollower, position: list[float]):
         robot_command = {}
         for index, motor in enumerate(arm.bus.motors.keys()):
             robot_command[f"{motor}.pos"] = position[index]
