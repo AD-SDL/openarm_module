@@ -54,9 +54,6 @@ class OpenArmNode(RestNode):
         """Periodically called to update the current state of the node."""
         try:
             if self.robot is not None:
-                print(self.robot.get_observation())
-                print(self.robot.arms.is_connected)
-                print(self.robot.arms.get_observation())
                 self.node_state = {"position": self.robot.arms.get_observation(), "connected": self.robot.arms.is_connected}
         except Exception as err:
                     self.logger.log_error(f"Error shutting down the OpenArm Node: {err}")
