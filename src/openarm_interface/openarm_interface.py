@@ -99,12 +99,17 @@ class OpenArmBimanual:
         self,
         right_can: str = "can0",
         left_can: str = "can1",
+        cameras: dict = { 
+        "chest": {"type": "intelrealsense", "serial_number_or_name": 025222071898, "width": 848, "height": 480, "fps": 30}, 
+        "wrist_left": {"type": "opencv", "index_or_path": "/dev/video-wrist-left", "width": 640, "height": 480, "fps": 30, "fourcc": "MJPG"},
+         "wrist_right": {"type": "opencv", "index_or_path": "/dev/video2", "width": 640, "height": 480, "fps": 30, "fourcc": "MJPG"}
+         },
         kp: list[float] | None = DEFAULT_KP,
         kd: list[float] | None = DEFAULT_KD,
     ):
        left_config = OpenArmFollowerConfig(port=left_can, position_kp=kp, position_kd=kd)
        right_config = OpenArmFollowerConfig(port=right_can, position_kp=kp, position_kd=kd)
-       self.bimanual_config = BiOpenArmFollowerConfig(right_arm_config=right_config, left_arm_config=left_config)
+       self.bimanual_config = BiOpenArmFollowerConfig(right_arm_config=right_config, left_arm_config=left_config, cameras=cameras)
        self.arms = BiOpenArmFollower(self.bimanual_config)
     def initialize(self):
         """Initialize both arms."""
