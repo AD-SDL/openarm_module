@@ -19,6 +19,7 @@ aaa    arm accelerates and decelerates smoothly rather than jumping to target.
 """
 
 import time
+from lerobot.cameras import CameraConfig
 import numpy as np
 from lerobot.robots.bi_openarm_follower import BiOpenArmFollower, BiOpenArmFollowerConfig
 from lerobot.robots.openarm_follower import OpenArmFollowerConfig, OpenArmFollower
@@ -99,7 +100,7 @@ class OpenArmBimanual:
         self,
         right_can: str = "can0",
         left_can: str = "can1",
-        cameras: dict = { 
+        cameras: dict[str, CameraConfig] = { 
         "chest": {"type": "intelrealsense", "serial_number_or_name": "025222071898", "width": 848, "height": 480, "fps": 30}, 
         "wrist_left": {"type": "opencv", "index_or_path": "/dev/video-wrist-left", "width": 640, "height": 480, "fps": 30, "fourcc": "MJPG"},
          "wrist_right": {"type": "opencv", "index_or_path": "/dev/video2", "width": 640, "height": 480, "fps": 30, "fourcc": "MJPG"}

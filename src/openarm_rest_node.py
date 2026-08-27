@@ -9,6 +9,7 @@ from madsci.node_module.helpers import action
 from madsci.node_module.rest_node_module import RestNode
 from madsci.common.types.location_types import LocationArgument
 from pathlib import Path
+from lerobot.cameras import CameraConfig
 
 from openarm_interface.openarm_interface import OpenArmBimanual
 
@@ -20,7 +21,7 @@ class OpenArmNodeConfig(RestNodeConfig):
     """CAN interface for the right arm."""
     left_can: str = "can1"
     """CAN interface for the left arm."""
-    camera_config: dict = { 
+    camera_config: dict[str, CameraConfig] = { 
         "chest": {"type": "intelrealsense", "serial_number_or_name": "025222071898", "width": 848, "height": 480, "fps": 30}, 
         "wrist_left": {"type": "opencv", "index_or_path": "/dev/video-wrist-left", "width": 640, "height": 480, "fps": 30, "fourcc": "MJPG"},
          "wrist_right": {"type": "opencv", "index_or_path": "/dev/video2", "width": 640, "height": 480, "fps": 30, "fourcc": "MJPG"}
