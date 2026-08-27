@@ -10,6 +10,8 @@ from madsci.node_module.rest_node_module import RestNode
 from madsci.common.types.location_types import LocationArgument
 from pathlib import Path
 from lerobot.cameras import CameraConfig
+from lerobot.cameras.opencv import OpenCVCameraConfig
+from lerobot.cameras.realsense import RealSenseCameraConfig
 
 from openarm_interface.openarm_interface import OpenArmBimanual
 
@@ -40,7 +42,10 @@ class OpenArmNode(RestNode):
         """Called to (re)initialize the node. Opens CAN connections and enables both arms."""
         cameras_objects = {}
         for key, value in self.config.camera_config.items():
-            cameras_objects[key] = CameraConfig(**value)
+            if value["type"] == "intelrealsense":
+                cameras_objects[key] = RealSenseCameraConfig(**value)
+            elif value["type"] == "opencv":
+                cameras_objects[key] = OpenCVCameraConfig(**value)
         self.robot = OpenArmBimanual(
             right_can=self.config.right_can,
             left_can=self.config.left_can,
