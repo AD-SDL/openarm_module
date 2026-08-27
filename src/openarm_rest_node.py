@@ -20,7 +20,8 @@ class OpenArmNodeConfig(RestNodeConfig):
     """CAN interface for the right arm."""
     left_can: str = "can1"
     """CAN interface for the left arm."""
-    dataset_root: Path
+    camera_config: dict
+    """Camera configuration."""
 
 
 class OpenArmNode(RestNode):
@@ -35,6 +36,7 @@ class OpenArmNode(RestNode):
         self.robot = OpenArmBimanual(
             right_can=self.config.right_can,
             left_can=self.config.left_can,
+            cameras=self.config.camera_config
         )
         self.robot.initialize()
         self.logger.log_info("OpenArm Node initialized.")
