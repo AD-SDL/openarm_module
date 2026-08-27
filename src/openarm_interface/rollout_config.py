@@ -29,6 +29,7 @@ from lerobot.teleoperators.config import TeleoperatorConfig
 from lerobot.utils.device_utils import auto_select_torch_device, is_torch_device_available
 
 from lerobot.rollout.inference import InferenceEngineConfig, SyncInferenceConfig
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -277,7 +278,7 @@ class RolloutConfig:
         # --- Strategy-specific validation ---
         if isinstance(self.strategy, DAggerStrategyConfig) and self.teleop is None:
             raise ValueError("DAgger strategy requires --teleop.type to be set")
-
+        print(Path(self.policy_path).is_dir())
         # TODO(Steven): DAgger shouldn't require a dataset (user may want to just rollout+intervene without recording), but for now we require it to simplify the implementation.
         needs_dataset = isinstance(
             self.strategy,
