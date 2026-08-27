@@ -43,8 +43,10 @@ class OpenArmNode(RestNode):
         cameras_objects = {}
         for key, value in self.config.camera_config.items():
             if value["type"] == "intelrealsense":
+                value.pop("type")
                 cameras_objects[key] = RealSenseCameraConfig(**value)
             elif value["type"] == "opencv":
+                value.pop("type")
                 cameras_objects[key] = OpenCVCameraConfig(**value)
         self.robot = OpenArmBimanual(
             right_can=self.config.right_can,
