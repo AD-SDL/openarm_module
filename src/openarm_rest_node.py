@@ -21,7 +21,7 @@ class OpenArmNodeConfig(RestNodeConfig):
     """CAN interface for the right arm."""
     left_can: str = "can1"
     """CAN interface for the left arm."""
-    camera_config: dict[str, CameraConfig] = { 
+    camera_config: dict= { 
         "chest": {"type": "intelrealsense", "serial_number_or_name": "025222071898", "width": 848, "height": 480, "fps": 30}, 
         "wrist_left": {"type": "opencv", "index_or_path": "/dev/video-wrist-left", "width": 640, "height": 480, "fps": 30, "fourcc": "MJPG"},
          "wrist_right": {"type": "opencv", "index_or_path": "/dev/video2", "width": 640, "height": 480, "fps": 30, "fourcc": "MJPG"}
@@ -38,10 +38,13 @@ class OpenArmNode(RestNode):
 
     def startup_handler(self) -> None:
         """Called to (re)initialize the node. Opens CAN connections and enables both arms."""
+        cameras_objects = {}
+        for key, value in self.config.camera_config.items():
+            cameras_objects[key] = CameraConfig(**value)
         self.robot = OpenArmBimanual(
             right_can=self.config.right_can,
             left_can=self.config.left_can,
-            cameras=self.config.camera_config
+            cameras=cameras_objects
         )
         self.robot.initialize()
         self.logger.log_info("OpenArm Node initialized.")
