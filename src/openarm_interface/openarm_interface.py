@@ -104,9 +104,10 @@ class OpenArmBimanual:
         kp: list[float] | None = DEFAULT_KP,
         kd: list[float] | None = DEFAULT_KD,
     ):
+       self.cameras = cameras
        left_config = OpenArmFollowerConfig(port=left_can, position_kp=kp, position_kd=kd)
        right_config = OpenArmFollowerConfig(port=right_can, position_kp=kp, position_kd=kd)
-       self.bimanual_config = BiOpenArmFollowerConfig(right_arm_config=right_config, left_arm_config=left_config, cameras=cameras)
+       self.bimanual_config = BiOpenArmFollowerConfig(right_arm_config=right_config, left_arm_config=left_config)
        self.arms = BiOpenArmFollower(self.bimanual_config)
     def initialize(self):
         """Initialize both arms."""
@@ -214,6 +215,7 @@ class OpenArmBimanual:
         replay(replay_config)
 
     def rollout(self, policy_path: str, task: str, duration: int):
+        self.bimanual_config.cameras = self.cameras
         rollout_config = RolloutConfig(robot=self.bimanual_config, policy_path=policy_path, task=task, duration=duration)
         rollout(rollout_config)
 
