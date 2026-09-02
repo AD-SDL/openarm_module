@@ -86,7 +86,7 @@ If the arms move to awkward or asymmetric positions, proceed with recalibration.
 
 ### Recalibrate Hardware (Only if needed)
 
-**WARNING**: This will overwrite the existing calibration. Only do this if verification above failed.
+**WARNING**: This will move the robot, and will overwrite the existing calibration. Only do this if verification above failed.
 
 ```bash
 # Calibrate follower right arm (can0)
@@ -269,8 +269,12 @@ lerobot-teleoperate \
     --robot.left_arm_config.position_kd="[5,5,1.5,0.3,0.3,0.3,0.3,0.05]" \
     --robot.right_arm_config.position_kp="[240,240,120,40,24,31,25,5]" \
     --robot.right_arm_config.position_kd="[5,5,1.5,0.3,0.3,0.3,0.3,0.05]" \
-    --display_data=true
+    --display_data=true \
+    --display_mode="foxglove"
 ```
+Note: 
+The default display mode overloads the memory, switching to foxglove seems to fix this. 
+
 
 **Tuning notes:**
 - `teleop` kp/kd values control leader arm stiffness — lower values make the leader easier to backdrive
@@ -287,6 +291,17 @@ lerobot-teleoperate \
 - Adjust `--teleop.joint_velocity_scale` (default: 60.0)
 - Lower values = slower movement
 - Higher values = faster movement
+
+**Teleop system crashes after running for too long, showing packet drops**
+ - Usually occurs when `--display-data` flag is true
+ - Check memory usage using `htop`, if it is growing without bound, the backend is the issues
+ - adding `--display-mode="foxglove"` switches the backend display script to one that uses memory better
+ - Check memory usage again using `htop`, if it is no longer growing without bound, the issue should be resolved
+
+**Cameras not connecting**
+- Cameras will change port when plug is adjusted, unfortunately they do not have unique serial numbers or ids
+- Run `v4l2-ctl --list-device` to find the video device address, e.g. `/dev/video0`
+- replace `/dev/video-right-wrist` or `/dev/video-left-wrist` with the new device address in the command
 
 ## Recording Demonstrations
 
@@ -495,18 +510,19 @@ openarm-can-diagnosis --canport can0
 If arms don't return to correct zero position:
 
 1. **Re-run hardware calibration:**
+   Warning: THIS WILL MOVE THE ROBOT
    ```bash
    openarm-can-zero-position-calibration --canport can0 --arm-side right_arm
    openarm-can-zero-position-calibration --canport can1 --arm-side left_arm
    ```
 
-2. **Delete LeRobot calibration and re-sync:**
+3. **Delete LeRobot calibration and re-sync:**
    ```bash
    rm -rf ~/.cache/huggingface/lerobot/calibration/
    python scripts/sync_calibration.py
    ```
 
-3. **Verify zero position:**
+4. **Verify zero position:**
    ```bash
    python scripts/move_to_zero.py
    ```
