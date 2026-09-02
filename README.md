@@ -421,11 +421,16 @@ lerobot-train \
     --policy.repo_id=local/wave_test
 ```
 
-##Running trained policy:
+Note: I had to manually removed the depth frame in the dataset's "info.json", as it wasn't compatible with ACT. It's possible it's supported by other models. 
+
+## Running trained policy:
 Run the "rollout action" on the open arm module
 
 for the "Policy Path" variable, it must be the folder containing the 'config.json',
 for example: '/home/rpl/humanoids/openarm_module/tests/outputs/train/wave_test_3/checkpoints/last/pretrained_model'
+
+
+
 ##
 
 ## Key Modifications in LeRobot Fork
