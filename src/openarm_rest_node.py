@@ -16,8 +16,13 @@ from lerobot.cameras.realsense import RealSenseCameraConfig
 from openarm_interface.openarm_interface import OpenArmBimanual
 
 
+
+        #  "right_wrist_right": {"type": "opencv", "index_or_path": "/dev/video3", "width": 640, "height": 480, "fps": 30, "fourcc": "MJPG"}
+
 class OpenArmNodeConfig(RestNodeConfig):
     """Configuration for the OpenArm node module."""
+
+
 
     right_can: str = "can0"
     """CAN interface for the right arm."""
@@ -25,8 +30,7 @@ class OpenArmNodeConfig(RestNodeConfig):
     """CAN interface for the left arm."""
     camera_config: dict= { 
         "left_chest": {"type": "intelrealsense", "serial_number_or_name": "025222071898", "width": 848, "height": 480, "fps": 30}, 
-        "left_wrist_left": {"type": "opencv", "index_or_path": "/dev/video-wrist-left", "width": 640, "height": 480, "fps": 30, "fourcc": "MJPG"},
-         "right_wrist_right": {"type": "opencv", "index_or_path": "/dev/video3", "width": 640, "height": 480, "fps": 30, "fourcc": "MJPG"}
+        "left_wrist_left": {"type": "opencv", "index_or_path": "/dev/video-wrist-left", "width": 640, "height": 480, "fps": 30, "fourcc": "MJPG"}
          }
     """Camera configuration."""
 
@@ -71,6 +75,7 @@ class OpenArmNode(RestNode):
         """Periodically called to update the current state of the node."""
         try:
             if self.robot is not None:
+                print(self.robot.get_observation())
                 self.node_state = { "connected": self.robot.arms.is_connected}
         except Exception as err:
                     self.logger.log_error(f"Error shutting down the OpenArm Node: {err}")

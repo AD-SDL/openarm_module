@@ -9,7 +9,7 @@ source ~/humanoids/lerobot_env/bin/activate
 # echo Serial Number: ${serial_number}
 
 v4l2-ctl --device=/dev/video-wrist-left --set-fmt-video=width=640,height=480,pixelformat=MJPG
-v4l2-ctl --device=/dev/video-wrist-right --set-fmt-video=width=640,height=480,pixelformat=MJPG
+v4l2-ctl --device=/dev/video2 --set-fmt-video=width=640,height=480,pixelformat=MJPG
 
 lerobot-record \
     --robot.type=bi_openarm_follower \
@@ -21,9 +21,6 @@ lerobot-record \
     }" \
     --robot.right_arm_config.port=can0 \
     --robot.right_arm_config.side=right \
-    --robot.right_arm_config.cameras="{ \
-        wrist_right: {type: opencv, index_or_path: /dev/video-wrist-right, width: 640, height: 480, fps: 30, fourcc: MJPG} \
-    }" \
     --robot.id=my_bimanual_follower \
     --teleop.type=bi_openarm_leader \
     --teleop.left_arm_config.port=can3 \
@@ -33,12 +30,16 @@ lerobot-record \
     --teleop.left_arm_config.position_kd="[2,2,1.0,0.5,0.1,0.1,0.1,0.02]" \
     --teleop.right_arm_config.position_kp="[120,120,60,20,12,15,12,2]" \
     --teleop.right_arm_config.position_kd="[2,2,1.0,0.5,0.1,0.1,0.1,0.02]" \
-    --dataset.repo_id=local/centrifuge_press_button \
-    --dataset.single_task="centrifuge_press_button" \
+    --dataset.repo_id=local/test_wave_3 \
+    --dataset.single_task="wave" \
     --dataset.fps=30 \
-    --dataset.num_episodes=10 \
+    --dataset.num_episodes=1 \
     --dataset.episode_time_s=20 \
     --dataset.reset_time_s=10 \
     --dataset.push_to_hub=false \
-    --display_data=false \
-    --resume=true
+    --display_data=false 
+
+
+    # --robot.right_arm_config.cameras="{ \
+    #     wrist_right: {type: opencv, index_or_path: /dev/video2, width: 640, height: 480, fps: 30, fourcc: MJPG} \
+    # }" \

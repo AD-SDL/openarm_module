@@ -164,7 +164,20 @@ config:
   rate_limit_cleanup_interval: 300
   right_can: can0
   left_can: can1
-  dataset_root: .
+  camera_config:
+    left_chest:
+      type: intelrealsense
+      serial_number_or_name: 025222071898
+      width: 848
+      height: 480
+      fps: 30
+    left_wrist_left:
+      type: opencv
+      index_or_path: /dev/video-wrist-left
+      width: 640
+      height: 480
+      fps: 30
+      fourcc: MJPG
 config_schema:
   description: Configuration for the OpenArm node module.
   properties:
@@ -278,11 +291,23 @@ config_schema:
       default: can1
       title: Left Can
       type: string
-    dataset_root:
-      format: path
-      title: Dataset Root
-      type: string
-  required:
-  - dataset_root
+    camera_config:
+      additionalProperties: true
+      default:
+        left_chest:
+          fps: 30
+          height: 480
+          serial_number_or_name: 025222071898
+          type: intelrealsense
+          width: 848
+        left_wrist_left:
+          fourcc: MJPG
+          fps: 30
+          height: 480
+          index_or_path: /dev/video-wrist-left
+          type: opencv
+          width: 640
+      title: Camera Config
+      type: object
   title: OpenArmNodeConfig
   type: object
