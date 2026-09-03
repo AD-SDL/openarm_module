@@ -7,17 +7,32 @@ from madsci.common.types.action_types import ActionFailed
 from madsci.common.types.node_types import RestNodeConfig
 from madsci.node_module.helpers import action
 from madsci.node_module.rest_node_module import RestNode
+from madsci.common.types.location_types import LocationArgument
+from pathlib import Path
+from lerobot.cameras import CameraConfig
+from lerobot.cameras.opencv import OpenCVCameraConfig
+from lerobot.cameras.realsense import RealSenseCameraConfig
 
 from openarm_interface.openarm_interface import OpenArmBimanual
 
 
+
+        #  "right_wrist_right": {"type": "opencv", "index_or_path": "/dev/video3", "width": 640, "height": 480, "fps": 30, "fourcc": "MJPG"}
+
 class OpenArmNodeConfig(RestNodeConfig):
     """Configuration for the OpenArm node module."""
+
+
 
     right_can: str = "can0"
     """CAN interface for the right arm."""
     left_can: str = "can1"
     """CAN interface for the left arm."""
+    camera_config: dict= { 
+        "left_chest": {"type": "intelrealsense", "serial_number_or_name": "025222071898", "width": 848, "height": 480, "fps": 30}, 
+        "left_wrist_left": {"type": "opencv", "index_or_path": "/dev/video-wrist-left", "width": 640, "height": 480, "fps": 30, "fourcc": "MJPG"}
+         }
+    """Camera configuration."""
 
 
 class OpenArmNode(RestNode):
@@ -29,9 +44,18 @@ class OpenArmNode(RestNode):
 
     def startup_handler(self) -> None:
         """Called to (re)initialize the node. Opens CAN connections and enables both arms."""
+        cameras_objects = {}
+        for key, value in self.config.camera_config.items():
+            if value["type"] == "intelrealsense":
+                value.pop("type")
+                cameras_objects[key] = RealSenseCameraConfig(**value)
+            elif value["type"] == "opencv":
+                value.pop("type")
+                cameras_objects[key] = OpenCVCameraConfig(**value)
         self.robot = OpenArmBimanual(
             right_can=self.config.right_can,
             left_can=self.config.left_can,
+            cameras=cameras_objects
         )
         self.robot.initialize()
         self.logger.log_info("OpenArm Node initialized.")
@@ -49,26 +73,14 @@ class OpenArmNode(RestNode):
 
     def state_handler(self) -> None:
         """Periodically called to update the current state of the node."""
-        if self.robot is not None:
-            try:
-                state = self.robot.getJ()
-                self.node_state = {
-                    "right_arm": {
-                        "positions":  state["right"]["positions"],
-                        "velocities": state["right"]["velocities"],
-                        "torques":    state["right"]["torques"],
-                        "gripper":    state["right"]["gripper"],
-                    },
-                    "left_arm": {
-                        "positions":  state["left"]["positions"],
-                        "velocities": state["left"]["velocities"],
-                        "torques":    state["left"]["torques"],
-                        "gripper":    state["left"]["gripper"],
-                    },
-                }
-            except Exception as err:
-                self.logger.log_error(f"Error reading arm state: {err}")
-
+        try:
+            if self.robot is not None:
+                print(self.robot.get_observation())
+                self.node_state = { "connected": self.robot.arms.is_connected}
+        except Exception as err:
+                    self.logger.log_error(f"Error shutting down the OpenArm Node: {err}")
+                    print(err)
+                    raise err
     # ------------------------------------------------------------------
     # Actions
     # ------------------------------------------------------------------
@@ -92,79 +104,34 @@ class OpenArmNode(RestNode):
             return ActionFailed(errors=[f"Home failed: {err}"])
         return None
 
-    @action(name="moveJ", description="Move one or both arms to specified joint configurations.")
-    def moveJ(
+    @action(name="move_t", description="Move one or both arms to specified joint configurations.")
+    def move_to_location(
         self,
-        right_angles: Annotated[
-            Optional[list[float]],
-            "7-element list of target joint positions in radians for the right arm. Pass null to skip.",
-        ] = None,
-        left_angles: Annotated[
-            Optional[list[float]],
-            "7-element list of target joint positions in radians for the left arm. Pass null to skip.",
-        ] = None,
-        right_gripper: Annotated[float, "Right gripper target position in radians."] = 0.0,
-        left_gripper: Annotated[float, "Left gripper target position in radians."] = 0.0,
+        location: Annotated[LocationArgument, "target location"],
         speed: Annotated[Optional[float], "Motion speed [0.0-1.0]. 0 = slowest, 1 = fastest. Defaults to interface default."] = None,
     ) -> Optional[ActionFailed]:
         """Move one or both arms to the specified joint configuration using cosine easing."""
+        left_target = {
+                    key.removeprefix("left_"): value for key, value in location.representation.items() if key.startswith("left_")
+                }
+                # Remove "right_" prefix
+        right_target = {
+                    key.removeprefix("right_"): value for key, value in location.representation.items() if key.startswith("right_")
+                }
+        left_angles = list(left_target.values()) if left_target else None
+        right_angles = list(right_target.values()) if right_target else None
         if right_angles is None and left_angles is None:
             return ActionFailed(errors=["At least one of right_angles or left_angles must be provided."])
-        try:
-            kwargs = {
-                "right_angles": right_angles,
-                "left_angles": left_angles,
-                "right_gripper": right_gripper,
-                "left_gripper": left_gripper,
-            }
-            if speed is not None:
-                kwargs["speed"] = speed
-            self.robot.moveJ(**kwargs)
-        except ValueError as err:
-            return ActionFailed(errors=[f"Invalid joint angles: {err}"])
-        except Exception as err:
-            return ActionFailed(errors=[f"moveJ failed: {err}"])
+        self.robot.move_arms_to_target(right_angles, left_angles, speed)
         return None
+    @action
+    def replay(self, repo_id: Annotated[str, "lerobot repo id for the episode"], episode: Annotated[int, "lerobot episode number to replay"], fps: int = 30) -> None:
+        """replay a pretrained teleop trajectory"""
+        self.robot.replay_example(repo_id, episode, self.config.dataset_root, fps)
 
-    @action(name="getJ", description="Read current joint state from one or both arms.")
-    def getJ(
-        self,
-        right: Annotated[bool, "Read right arm state."] = True,
-        left: Annotated[bool, "Read left arm state."] = True,
-    ) -> dict:
-        """Return current joint positions, velocities, and torques for one or both arms."""
-        try:
-            return self.robot.getJ(right=right, left=left)
-        except Exception as err:
-            return ActionFailed(errors=[f"getJ failed: {err}"])
-
-    @action(
-        name="moveL",
-        description="[STUB] Move end-effector to a Cartesian pose. Not yet implemented - requires IK.",
-    )
-    def moveL(
-        self,
-        right_pose: Annotated[
-            Optional[list[float]],
-            "[x, y, z, roll, pitch, yaw] target pose for the right arm in metres/radians.",
-        ] = None,
-        left_pose: Annotated[
-            Optional[list[float]],
-            "[x, y, z, roll, pitch, yaw] target pose for the left arm in metres/radians.",
-        ] = None,
-        speed: Annotated[Optional[float], "Motion speed [0.0-1.0]."] = None,
-    ) -> ActionFailed:
-        """Not yet implemented - requires an IK solver (e.g. pinocchio + OpenArm URDF)."""
-        return ActionFailed(errors=["moveL is not yet implemented. An IK solver is required."])
-
-    @action(
-        name="getL",
-        description="[STUB] Get end-effector Cartesian pose. Not yet implemented - requires FK.",
-    )
-    def getL(self) -> ActionFailed:
-        """Not yet implemented - requires a forward kinematics model."""
-        return ActionFailed(errors=["getL is not yet implemented. A forward kinematics model is required."])
-
+    @action
+    def rollout(self, policy_path: str, task: str, duration: int) -> None:
+        self.robot.rollout(policy_path, task, duration)
     # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
@@ -207,13 +174,6 @@ class OpenArmNode(RestNode):
         except Exception as err:
             self.logger.log_error(f"Error during safety stop: {err}")
         self.logger.log("Node stopped.")
-        return True
-
-    def cancel(self) -> None:
-        """Cancel the current action."""
-        self.logger.log("Canceling node...")
-        self.node_status.cancelled = True
-        self.logger.log("Node cancelled.")
         return True
 
 

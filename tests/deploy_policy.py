@@ -22,10 +22,11 @@ from lerobot.robots.openarm_follower import OpenArmFollowerConfigBase
 
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
-POLICY_PATH = Path.home() / "/home/rpl/humanoids/openarm_module/outputs/train/centrifuge_press_button_v1/checkpoints/040000/pretrained_model"
+# POLICY_PATH = Path.home() / "/home/rpl/humanoids/openarm_module/outputs/train/centrifuge_press_button_v1/checkpoints/040000/pretrained_model"
+POLICY_PATH = Path.home() / "/home/rpl/humanoids/openarm_module/outputs/train/openarm_open_lab_door_v1/checkpoints/100000/pretrained_model"
 CAMERA_SERIAL  = "025222071898"
 WRIST_CAM_PATH = "/dev/video-wrist-right"
-NUM_TRIALS     = 10
+NUM_TRIALS     = 1
 EPISODE_LENGTH = 40   # seconds
 RESET_TIME     = 5    # seconds between trials
 DEVICE         = "cuda"
@@ -112,7 +113,7 @@ def denormalize_action(action, post_weights, device):
 def make_robot_cfg():
     return BiOpenArmFollowerConfig(
         left_arm_config=OpenArmFollowerConfigBase(
-            port='can1',
+            port='can2',
             side='left',
             cameras={
                 'chest': RealSenseCameraConfig(
@@ -130,7 +131,7 @@ def make_robot_cfg():
             }
         ),
         right_arm_config=OpenArmFollowerConfigBase(
-            port='can0',
+            port='can3',
             side='right',
             cameras={
                 'wrist_right': OpenCVCameraConfig(

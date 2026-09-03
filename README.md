@@ -407,6 +407,32 @@ python lerobot/scripts/train.py \
     training.eval_freq=10000
 ```
 
+Example of training with repo test_wave_3:
+
+```bash
+lerobot-train \
+    --dataset.repo_id=local/test_wave_3 \
+    --dataset.root="/home/rpl/.cache/huggingface/lerobot/local/test_wave_3_20260901_211945" \ 
+    --dataset.repo_type=dataset \
+    --policy.type=act \
+    --output_dir=outputs/^Cain/wave_test_3 \
+    --job_name=wave_test \
+    --steps=2 \
+    --policy.repo_id=local/wave_test
+```
+
+Note: I had to manually removed the depth frame in the dataset's "info.json", as it wasn't compatible with ACT. It's possible it's supported by other models. 
+
+## Running trained policy:
+Run the "rollout action" on the open arm module
+
+for the "Policy Path" variable, it must be the folder containing the 'config.json',
+for example: '/home/rpl/humanoids/openarm_module/tests/outputs/train/wave_test_3/checkpoints/last/pretrained_model'
+
+
+
+##
+
 ## Key Modifications in LeRobot Fork
 
 This module depends on the `lerobot` fork which contains the following modifications from upstream LeRobot:
