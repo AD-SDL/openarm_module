@@ -415,7 +415,7 @@ lerobot-train \
     --dataset.root="/home/rpl/.cache/huggingface/lerobot/local/test_wave_3_20260901_211945" \ 
     --dataset.repo_type=dataset \
     --policy.type=act \
-    --output_dir=outputs/^Cain/wave_test_3 \
+    --output_dir=outputs/train/wave_test_3 \
     --job_name=wave_test \
     --steps=2 \
     --policy.repo_id=local/wave_test
