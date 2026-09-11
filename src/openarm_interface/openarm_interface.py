@@ -24,8 +24,12 @@ import numpy as np
 from lerobot.robots.bi_openarm_follower import BiOpenArmFollower, BiOpenArmFollowerConfig
 from lerobot.robots.openarm_follower import OpenArmFollowerConfig, OpenArmFollower
 from lerobot.scripts.lerobot_replay import replay, ReplayConfig, DatasetReplayConfig
-from openarm_interface.rollout_command import rollout
-from openarm_interface.rollout_config import RolloutConfig
+from lerobot.configs import PreTrainedConfig
+from lerobot.rollout import BaseStrategyConfig, RolloutConfig
+from lerobot.utils.process import ProcessSignalHandler
+from lerobot.rollout.strategies import BaseStrategy
+from lerobot.rollout.inference import SyncInferenceConfig
+from lerobot.rollout import build_rollout_context
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -214,11 +218,24 @@ class OpenArmBimanual:
         replay_config = ReplayConfig(robot = self.bimanual_config, dataset=dataset_config)
         replay(replay_config)
 
-    def rollout(self, policy_path: str, task: str, duration: int):
+    def rollout(self, model_id: str, policy_path: str, task: str, duration: int):
         self.bimanual_config.cameras = self.cameras
-        rollout_config = RolloutConfig(robot=self.bimanual_config, policy_path=policy_path, task=task, duration=duration)
-        rollout(rollout_config)
-
+        policy_config = PreTrainedConfig.from_pretrained(model_id)
+        policy_config.pretrained_path = policy_path
+        config = RolloutConfig(robot=self.bimanual_config, strategy=BaseStrategyConfig(), inference=SyncInferenceConfig(), policy=policy_config, task=task, duration=duration)
+        signal_handler = ProcessSignalHandler(use_threads=True)
+        context = build_rollout_context(config, signal_handler.shutdown_event)
+        strategy = BaseStrategy(config.strategy)
+        error = None
+        try:
+            strategy.setup(context)
+            strategy.run(context)
+        except Exception as e:
+            error  = e
+        finally:
+            strategy.teardown(context)
+            if error is not None:
+                raise error
 # ---------------------------------------------------------------------------
 # Example usage
 # ---------------------------------------------------------------------------

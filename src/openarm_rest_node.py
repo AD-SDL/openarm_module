@@ -130,8 +130,8 @@ class OpenArmNode(RestNode):
         self.robot.replay_example(repo_id, episode, self.config.dataset_root, fps)
 
     @action
-    def rollout(self, policy_path: str, task: str, duration: int) -> None:
-        self.robot.rollout(policy_path, task, duration)
+    def rollout(self, model_id: str, policy_path: str, task: str, duration: int) -> None:
+        self.robot.rollout(model_id, policy_path, task, duration)
     # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
