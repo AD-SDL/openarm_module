@@ -1,0 +1,18 @@
+LEROBOT COMMANDS
+Dominic Motekaitis 7/16/26
+
+RECORDING:
+
+lerobot-record --robot.type=openarm_follower --robot.port=can3 --robot.side=left --robot.id=my_follower --teleop.type=openarm_leader --teleop.port=can1 --teleop.id=my_leader --dataset.repo_id=dominicdx/rpl_pick_and_place7 --dataset.single_task="Left pick and place with improper technique" --robot.cameras="{chest: {type: intelrealsense, serial_number_or_name: 025222071898, width: 848, height: 480, fps: 30, use_depth: true}, wrist_left: {type: opencv, index_or_path: /dev/video-wrist-left, width: 640, height: 480, fps: 30, fourcc: MJPG}}"
+
+BI_MANUAL OPERATION:
+
+lerobot-record --robot.type=openarm_follower --robot.port=can3 --robot.side=left --robot.id=my_follower --teleop.type=openarm_leader --teleop.port=can1 --teleop.id=my_leader --dataset.repo_id=dominicdx/rpl_pick_and_place7 --dataset.single_task="Left pick and place with improper technique" --robot.cameras="{chest: {type: intelrealsense, serial_number_or_name: 025222071898, width: 848, height: 480, fps: 30, use_depth: true}, wrist_left: {type: opencv, index_or_path: /dev/video-wrist-left, width: 640, height: 480, fps: 30, fourcc: MJPG}}"
+
+REPLAY EPISODES:
+
+lerobot-record --robot.type=openarm_follower --robot.port=can3 --robot.side=left --robot.id=my_follower --teleop.type=openarm_leader --teleop.port=can1 --teleop.id=my_leader --dataset.repo_id=dominicdx/rpl_pick_and_place7 --dataset.single_task="Left pick and place with improper technique" --robot.cameras="{chest: {type: intelrealsense, serial_number_or_name: 025222071898, width: 848, height: 480, fps: 30, use_depth: true}, wrist_left: {type: opencv, index_or_path: /dev/video-wrist-left, width: 640, height: 480, fps: 30, fourcc: MJPG}}"
+
+INITIATE TRAINING:
+
+
