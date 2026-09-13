@@ -130,7 +130,7 @@ class OpenArmNode(RestNode):
         self.robot.replay_example(repo_id, episode, self.config.dataset_root, fps)
 
     @action
-    def rollout(self, model_id: str, policy_path: str, task: str, duration: int) -> None:
+    def rollout(self, model_id: Annotated[str, "lerobot model id for the rollout, e.g. local/test_wave"], policy_path: Annotated[str, "path to the folder containg the policies config.json"], task: Annotated[str, "the task to perform"], duration: Annotated[int, "the duration of the rollout in seconds"]) -> None:
         self.robot.rollout(model_id, policy_path, task, duration)
     # ------------------------------------------------------------------
     # Lifecycle

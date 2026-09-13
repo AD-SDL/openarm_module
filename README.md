@@ -424,10 +424,27 @@ lerobot-train \
 Note: I had to manually removed the depth frame in the dataset's "info.json", as it wasn't compatible with ACT. It's possible it's supported by other models. 
 
 ## Running trained policy:
-Run the "rollout action" on the open arm module
 
-for the "Policy Path" variable, it must be the folder containing the 'config.json',
-for example: '/home/rpl/humanoids/openarm_module/tests/outputs/train/wave_test_3/checkpoints/last/pretrained_model'
+With the node running in the background at "http://localhost:2000": 
+
+Run the "rollout action" on the open arm module, either from the dashboard or using:
+
+```python
+from madsci.client.node_client import NodeClient
+from madsci.common.types.action_types import ActionRequest
+
+open_arm_client = NodeClient("http://localhost:2000")
+rollout_request = ActionRequest(action_name="rollout")
+args = {"model_id": "local/my_model_id", #the lerobot model id for your pretrained model
+        "policy_path": "path/to/your/policy" #the path to the folder containing the config.json for your pretrained model
+        "duration": 10 #duration in seconds
+        "task": "wave" #the task to perform
+        } 
+rollout_request.args = args
+open_arm_client.send_action(rollout_request)
+```
+
+An example policy_path variable: '/home/rpl/humanoids/openarm_module/tests/outputs/train/wave_test_3/checkpoints/last/pretrained_model'
 
 
 
