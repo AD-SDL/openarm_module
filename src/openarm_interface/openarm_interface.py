@@ -216,7 +216,7 @@ class OpenArmBimanual:
         replay_config = ReplayConfig(robot = self.bimanual_config, dataset=dataset_config)
         replay(replay_config)
 
-    def rollout(self, model_id: str, policy_path: str, task: str, duration: int):
+    def rollout(self, policy_path: str, task: str, duration: int):
         self.bimanual_config.cameras = self.cameras
         policy_config = PreTrainedConfig.from_pretrained(Path(policy_path))
         policy_config.pretrained_path = policy_path
