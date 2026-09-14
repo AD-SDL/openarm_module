@@ -131,36 +131,45 @@ def make_robot_cfg(use_velocity_and_torque):
 
 
 def resolve_schema(policy):
-    """Pick the torque flag from the checkpoint, then read the key names off the robot.
-
-    ACT stores only shapes, not per-dimension names, so the checkpoint is
-    authoritative for widths and the robot for names and their order.
+    """Derive the torque flag and both key lists from the checkpoint.
+    
+    ACT stores only shapes, not per-dimension names, so the checkpoint gives the
+    widths and the motor order gives the names.
+    
     Returns (robot_cfg, state_keys, action_keys).
     """
     state_dim  = tuple(policy.config.input_features["observation.state"].shape)[0]
     action_dim = tuple(policy.config.output_features["action"].shape)[0]
 
-    n_motors = 2 * len(make_robot_cfg(False).left_arm_config.motor_config)
-    if state_dim == n_motors:
-        use_vt = False
-    elif state_dim == 3 * n_motors:
-        use_vt = True
-    else:
+    cfg = make_robot_cfg(False)
+    motors = (
+        [f"left_{m}" for m in cfg.left_arm_config.motor_config]
+        + [f"right_{m}" for m in cfg.right_arm_config.motor_config]
+    )
+
+    def keys_for(dim, what):
+        if dim == len(motors):
+            return [f"{m}.pos" for m in motors]
+        if dim == 3 * len(motors):
+            return [f"{m}.{s}" for m in motors for s in ("pos", "vel", "torque")]
         raise ValueError(
-            f"Policy expects a {state_dim}-wide observation.state, but this robot has "
-            f"{n_motors} motors and can only produce {n_motors} (.pos only) or "
-            f"{3 * n_motors} (.pos/.vel/.torque)."
+            f"Policy {what} is {dim}-wide; this robot has {len(motors)} motors and can only "
+            f"match {len(motors)} (.pos only) or {3 * len(motors)} (.pos/.vel/.torque)."
         )
 
+    state_keys  = keys_for(state_dim, "observation.state")
+    action_keys = keys_for(action_dim, "action")
+
+    use_vt = len(state_keys) != len(motors)
     robot_cfg = make_robot_cfg(use_vt)
     robot = make_robot_from_config(robot_cfg)  # constructed, not connected
-    state_keys  = [k for k, v in robot.observation_features.items() if v is float]
-    action_keys = list(robot.action_features)
 
-    if len(state_keys) != state_dim:
-        raise ValueError(f"Derived {len(state_keys)} state keys, policy wants {state_dim}")
-    if len(action_keys) != action_dim:
-        raise ValueError(f"Derived {len(action_keys)} action keys, policy emits {action_dim}")
+    observed = [k for k, v in robot.observation_features.items() if v is float]
+    if observed != state_keys:
+        raise ValueError(
+            f"Robot reports {len(observed)} state keys but the policy wants "
+            f"{len(state_keys)}; first mismatch near {set(observed) ^ set(state_keys)}"
+        )
 
     print(f"Schema: state={state_dim}, action={action_dim}, use_velocity_and_torque={use_vt}")
     return robot_cfg, state_keys, action_keys
