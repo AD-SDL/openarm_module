@@ -109,8 +109,8 @@ class OpenArmBimanual:
         kd: list[float] | None = DEFAULT_KD,
     ):
        self.cameras = cameras
-       left_config = OpenArmFollowerConfig(port=left_can, position_kp=kp, position_kd=kd, side="left")
-       right_config = OpenArmFollowerConfig(port=right_can, position_kp=kp, position_kd=kd, side="right")
+       left_config = OpenArmFollowerConfig(port=left_can, position_kp=kp, position_kd=kd, side="left", use_velocity_and_torque=True)
+       right_config = OpenArmFollowerConfig(port=right_can, position_kp=kp, position_kd=kd, side="right", use_velocity_and_torque=True)
        self.bimanual_config = BiOpenArmFollowerConfig(right_arm_config=right_config, left_arm_config=left_config)
        self.arms = BiOpenArmFollower(self.bimanual_config)
     def initialize(self):
@@ -120,10 +120,8 @@ class OpenArmBimanual:
 
     def shutdown(self, right: bool = True, left: bool = True):
         """Disable one or both arms."""
-        if right and self.arms.right_arm._initialized:
-            self.arms.right_arm.disconnect()
-        if left and self.arms.left_arm._initialized:
-            self.arms.left_arm.disconnect()
+        self.arms.right_arm.disconnect()
+        self.arms.left_arm.disconnect()
     def get_left_position(self):
         left_observation = self.arms.left_arm.get_observation()
         left_pos = []
@@ -220,7 +218,7 @@ class OpenArmBimanual:
 
     def rollout(self, model_id: str, policy_path: str, task: str, duration: int):
         self.bimanual_config.cameras = self.cameras
-        policy_config = PreTrainedConfig.from_pretrained(model_id)
+        policy_config = PreTrainedConfig.from_pretrained(Path(policy_path))
         policy_config.pretrained_path = policy_path
         config = RolloutConfig(robot=self.bimanual_config, strategy=BaseStrategyConfig(), inference=SyncInferenceConfig(), policy=policy_config, task=task, duration=duration)
         signal_handler = ProcessSignalHandler(use_threads=True)

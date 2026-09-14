@@ -16,7 +16,6 @@ from lerobot.cameras.realsense import RealSenseCameraConfig
 from openarm_interface.openarm_interface import OpenArmBimanual
 
 
-
         #  "right_wrist_right": {"type": "opencv", "index_or_path": "/dev/video3", "width": 640, "height": 480, "fps": 30, "fourcc": "MJPG"}
 
 class OpenArmNodeConfig(RestNodeConfig):
@@ -30,7 +29,10 @@ class OpenArmNodeConfig(RestNodeConfig):
     """CAN interface for the left arm."""
     camera_config: dict= { 
         "left_chest": {"type": "intelrealsense", "serial_number_or_name": "025222071898", "width": 848, "height": 480, "fps": 30}, 
-        "left_wrist_left": {"type": "opencv", "index_or_path": "/dev/video-wrist-left", "width": 640, "height": 480, "fps": 30, "fourcc": "MJPG"}
+        "left_wrist_left": {"type": "opencv", "index_or_path": "/dev/video-wrist-left", "width": 640, "height": 480, "fps": 30, "fourcc": "MJPG"},
+        "right_wrist_right": {"type": "opencv", "index_or_path": "/dev/video2", "width": 640, "height": 480, "fps": 30, "fourcc": "MJPG"}
+                
+
          }
     """Camera configuration."""
 

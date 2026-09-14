@@ -120,21 +120,27 @@ actions:
     name: rollout
     description: ''
     args:
+      model_id:
+        name: model_id
+        description: lerobot model id for the rollout, e.g. local/test_wave
+        argument_type: str
+        required: true
+        default: null
       policy_path:
         name: policy_path
-        description: ''
+        description: path to the folder containg the policies config.json
         argument_type: str
         required: true
         default: null
       task:
         name: task
-        description: ''
+        description: the task to perform
         argument_type: str
         required: true
         default: null
       duration:
         name: duration
-        description: ''
+        description: the duration of the rollout in seconds
         argument_type: int
         required: true
         default: null
@@ -174,6 +180,13 @@ config:
     left_wrist_left:
       type: opencv
       index_or_path: /dev/video-wrist-left
+      width: 640
+      height: 480
+      fps: 30
+      fourcc: MJPG
+    right_wrist_right:
+      type: opencv
+      index_or_path: /dev/video2
       width: 640
       height: 480
       fps: 30
@@ -305,6 +318,13 @@ config_schema:
           fps: 30
           height: 480
           index_or_path: /dev/video-wrist-left
+          type: opencv
+          width: 640
+        right_wrist_right:
+          fourcc: MJPG
+          fps: 30
+          height: 480
+          index_or_path: /dev/video2
           type: opencv
           width: 640
       title: Camera Config
