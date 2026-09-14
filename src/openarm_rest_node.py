@@ -35,6 +35,7 @@ class OpenArmNodeConfig(RestNodeConfig):
 
          }
     """Camera configuration."""
+    use_velocity_and_torque: bool = True
 
 
 class OpenArmNode(RestNode):
@@ -57,7 +58,8 @@ class OpenArmNode(RestNode):
         self.robot = OpenArmBimanual(
             right_can=self.config.right_can,
             left_can=self.config.left_can,
-            cameras=cameras_objects
+            cameras=cameras_objects, 
+            use_velocity_and_torque=self.config.use_velocity_and_torque
         )
         self.robot.initialize()
         self.logger.log_info("OpenArm Node initialized.")

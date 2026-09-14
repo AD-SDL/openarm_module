@@ -107,10 +107,11 @@ class OpenArmBimanual:
         cameras: dict[str, CameraConfig] = {},
         kp: list[float] | None = DEFAULT_KP,
         kd: list[float] | None = DEFAULT_KD,
+        use_velocity_and_torque: bool = True
     ):
        self.cameras = cameras
-       left_config = OpenArmFollowerConfig(port=left_can, position_kp=kp, position_kd=kd, side="left", use_velocity_and_torque=True)
-       right_config = OpenArmFollowerConfig(port=right_can, position_kp=kp, position_kd=kd, side="right", use_velocity_and_torque=True)
+       left_config = OpenArmFollowerConfig(port=left_can, position_kp=kp, position_kd=kd, side="left", use_velocity_and_torque=use_velocity_and_torque)
+       right_config = OpenArmFollowerConfig(port=right_can, position_kp=kp, position_kd=kd, side="right", use_velocity_and_torque=use_velocity_and_torque)
        self.bimanual_config = BiOpenArmFollowerConfig(right_arm_config=right_config, left_arm_config=left_config)
        self.arms = BiOpenArmFollower(self.bimanual_config)
     def initialize(self):
