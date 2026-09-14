@@ -1,0 +1,7 @@
+node_name: default.node
+node_id: 01M0D6RNDPA7D8D5QND4FTHWV1
+node_description: null
+node_type: device
+module_name: open_arm_node
+module_version: 0.0.1
+capabilities: null

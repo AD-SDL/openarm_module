@@ -10,8 +10,8 @@ print("=== Moving arms to zero (slow and smooth) ===")
 kp_values = [60.0, 60.0, 60.0, 60.0, 6.0, 8.0, 6.0, 6.0]  # ~25% of original
 kd_values = [2.0, 2.0, 1.5, 2.0, 0.2, 0.2, 0.2, 0.2]      # Reduced proportionally
 
-right_arm = oa.OpenArm("can0", True)
-left_arm = oa.OpenArm("can1", True)
+right_arm = oa.OpenArm("can2", True)
+left_arm = oa.OpenArm("can3", True)
 
 motor_types = [
     oa.MotorType.DM8009, oa.MotorType.DM8009,
