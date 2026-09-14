@@ -22,7 +22,7 @@ from lerobot.robots.openarm_follower import OpenArmFollowerConfigBase
 
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
-POLICY_PATH = Path.home() / "/home/rpl/humanoids/openarm_module/outputs/train/centrifuge_press_button_v1/checkpoints/040000/pretrained_model"
+POLICY_PATH = Path("/home/rpl/humanoids/openarm_module/outputs/train/centrifuge_press_button_v1/checkpoints/040000/pretrained_model")
 CAMERA_SERIAL  = "025222071898"
 WRIST_CAM_PATH = "/dev/video-wrist-right"
 NUM_TRIALS     = 10
@@ -32,24 +32,8 @@ DEVICE         = "cuda"
 FPS            = 30
 # ─────────────────────────────────────────────────────────────────────────────
 
-STATE_KEYS = [
-    'left_joint_1.pos',  'left_joint_1.vel',  'left_joint_1.torque',
-    'left_joint_2.pos',  'left_joint_2.vel',  'left_joint_2.torque',
-    'left_joint_3.pos',  'left_joint_3.vel',  'left_joint_3.torque',
-    'left_joint_4.pos',  'left_joint_4.vel',  'left_joint_4.torque',
-    'left_joint_5.pos',  'left_joint_5.vel',  'left_joint_5.torque',
-    'left_joint_6.pos',  'left_joint_6.vel',  'left_joint_6.torque',
-    'left_joint_7.pos',  'left_joint_7.vel',  'left_joint_7.torque',
-    'left_gripper.pos',  'left_gripper.vel',  'left_gripper.torque',
-    'right_joint_1.pos', 'right_joint_1.vel', 'right_joint_1.torque',
-    'right_joint_2.pos', 'right_joint_2.vel', 'right_joint_2.torque',
-    'right_joint_3.pos', 'right_joint_3.vel', 'right_joint_3.torque',
-    'right_joint_4.pos', 'right_joint_4.vel', 'right_joint_4.torque',
-    'right_joint_5.pos', 'right_joint_5.vel', 'right_joint_5.torque',
-    'right_joint_6.pos', 'right_joint_6.vel', 'right_joint_6.torque',
-    'right_joint_7.pos', 'right_joint_7.vel', 'right_joint_7.torque',
-    'right_gripper.pos', 'right_gripper.vel', 'right_gripper.torque',
-]
+STATE_KEYS = []
+ACTION_KEYS = []
 
 
 def load_policy(policy_path, device):
@@ -109,11 +93,12 @@ def denormalize_action(action, post_weights, device):
     return action
 
 
-def make_robot_cfg():
+def make_robot_cfg(use_velocity_and_torque):
     return BiOpenArmFollowerConfig(
         left_arm_config=OpenArmFollowerConfigBase(
             port='can1',
             side='left',
+            use_velocity_and_torque=use_velocity_and_torque,
             cameras={
                 'chest': RealSenseCameraConfig(
                     serial_number_or_name=CAMERA_SERIAL,
@@ -132,9 +117,10 @@ def make_robot_cfg():
         right_arm_config=OpenArmFollowerConfigBase(
             port='can0',
             side='right',
+            use_velocity_and_torque=use_velocity_and_torque,
             cameras={
                 'wrist_right': OpenCVCameraConfig(
-                    index_or_path='/dev/video-wrist-right',
+                    index_or_path='/dev/video2',
                     fps=FPS,
                     width=640,
                     height=480,
@@ -142,6 +128,42 @@ def make_robot_cfg():
             }
         ),
     )
+
+
+def resolve_schema(policy):
+    """Pick the torque flag from the checkpoint, then read the key names off the robot.
+
+    ACT stores only shapes, not per-dimension names, so the checkpoint is
+    authoritative for widths and the robot for names and their order.
+    Returns (robot_cfg, state_keys, action_keys).
+    """
+    state_dim  = tuple(policy.config.input_features["observation.state"].shape)[0]
+    action_dim = tuple(policy.config.output_features["action"].shape)[0]
+
+    n_motors = 2 * len(make_robot_cfg(False).left_arm_config.motor_config)
+    if state_dim == n_motors:
+        use_vt = False
+    elif state_dim == 3 * n_motors:
+        use_vt = True
+    else:
+        raise ValueError(
+            f"Policy expects a {state_dim}-wide observation.state, but this robot has "
+            f"{n_motors} motors and can only produce {n_motors} (.pos only) or "
+            f"{3 * n_motors} (.pos/.vel/.torque)."
+        )
+
+    robot_cfg = make_robot_cfg(use_vt)
+    robot = make_robot_from_config(robot_cfg)  # constructed, not connected
+    state_keys  = [k for k, v in robot.observation_features.items() if v is float]
+    action_keys = list(robot.action_features)
+
+    if len(state_keys) != state_dim:
+        raise ValueError(f"Derived {len(state_keys)} state keys, policy wants {state_dim}")
+    if len(action_keys) != action_dim:
+        raise ValueError(f"Derived {len(action_keys)} action keys, policy emits {action_dim}")
+
+    print(f"Schema: state={state_dim}, action={action_dim}, use_velocity_and_torque={use_vt}")
+    return robot_cfg, state_keys, action_keys
 
 
 def run_policy_episode(robot, policy, episode_length, device, fps, pre_weights, post_weights):
@@ -178,8 +200,11 @@ def run_policy_episode(robot, policy, episode_length, device, fps, pre_weights, 
 
             action = denormalize_action(action, post_weights, device)
 
-            action_np = action.squeeze().cpu().numpy()
-            action_dict = {k: float(v) for k, v in zip(STATE_KEYS, action_np)}
+            action_np = action.reshape(-1).cpu().numpy()
+            # strict=True because plain zip() truncates silently: pairing a 16-wide
+            # action against 48 keys would command the wrong joints with the wrong
+            # values and leave the right arm uncommanded, with no error.
+            action_dict = {k: float(v) for k, v in zip(ACTION_KEYS, action_np, strict=True)}
             robot.send_action(action_dict)
 
             sleep_time = dt - (time.perf_counter() - loop_start)
@@ -195,6 +220,8 @@ def run_policy_episode(robot, policy, episode_length, device, fps, pre_weights, 
 
 
 def main():
+    global STATE_KEYS, ACTION_KEYS
+
     print("=" * 70)
     print("OpenArm Bimanual Policy Deployment")
     print("=" * 70)
@@ -211,7 +238,7 @@ def main():
     print("Loading normalizers...")
     pre_weights, post_weights = load_normalizers(POLICY_PATH, DEVICE)
 
-    robot_cfg = make_robot_cfg()
+    robot_cfg, STATE_KEYS, ACTION_KEYS = resolve_schema(policy)
     results = []
 
     try:
