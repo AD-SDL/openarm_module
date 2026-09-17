@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-import openarm_can as oa
 import time
+
+import openarm_can as oa
 
 print("=== OpenArm Hardware-Synced Calibration ===")
 
@@ -11,10 +12,13 @@ right_arm = oa.OpenArm("can2", True)
 left_arm = oa.OpenArm("can3", True)
 
 motor_types = [
-    oa.MotorType.DM8009, oa.MotorType.DM8009,
-    oa.MotorType.DM4340, oa.MotorType.DM4340,
-    oa.MotorType.DM4310, oa.MotorType.DM4310,
-    oa.MotorType.DM4310
+    oa.MotorType.DM8009,
+    oa.MotorType.DM8009,
+    oa.MotorType.DM4340,
+    oa.MotorType.DM4340,
+    oa.MotorType.DM4310,
+    oa.MotorType.DM4310,
+    oa.MotorType.DM4310,
 ]
 send_ids = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07]
 recv_ids = [0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17]
@@ -44,7 +48,7 @@ for step in range(300):
     left_arm.get_gripper().mit_control_all(gripper_zero)
     right_arm.recv_all()
     left_arm.recv_all()
-    time.sleep(1.0/60.0)
+    time.sleep(1.0 / 60.0)
 
 print("✓ Arms at hardware zero!")
 
@@ -59,14 +63,20 @@ time.sleep(0.5)
 # Step 2: Run LeRobot calibration
 print("\nStep 2: Running LeRobot calibration at hardware zero...")
 
-from lerobot.robots.bi_openarm_follower.config_bi_openarm_follower import BiOpenArmFollowerConfig
-from lerobot.robots.openarm_follower.config_openarm_follower import OpenArmFollowerConfig
 from lerobot.robots import make_robot_from_config
+from lerobot.robots.bi_openarm_follower.config_bi_openarm_follower import (
+    BiOpenArmFollowerConfig,
+)
+from lerobot.robots.openarm_follower.config_openarm_follower import (
+    OpenArmFollowerConfig,
+)
 
 # Create config
-left_config = OpenArmFollowerConfig(port='can1', side='left')
-right_config = OpenArmFollowerConfig(port='can0', side='right')
-config = BiOpenArmFollowerConfig(left_arm_config=left_config, right_arm_config=right_config)
+left_config = OpenArmFollowerConfig(port="can1", side="left")
+right_config = OpenArmFollowerConfig(port="can0", side="right")
+config = BiOpenArmFollowerConfig(
+    left_arm_config=left_config, right_arm_config=right_config
+)
 
 # Create robot
 robot = make_robot_from_config(config)

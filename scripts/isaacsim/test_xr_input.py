@@ -2,7 +2,7 @@ from isaacsim import SimulationApp
 
 launcher_args = {
     "headless": False,
-    "experience": "/home/vision/workspace/simlab/.venv-isaacsim/lib/python3.11/site-packages/isaacsim/apps/isaacsim.exp.base.xr.vr.kit"
+    "experience": "/home/vision/workspace/simlab/.venv-isaacsim/lib/python3.11/site-packages/isaacsim/apps/isaacsim.exp.base.xr.vr.kit",
 }
 app = SimulationApp(launcher_args)
 
@@ -16,11 +16,13 @@ XR_EXTENSIONS = [
     "isaacsim.xr.input_devices",
 ]
 
+
 def enable_xr_extensions():
     ext_manager = omni.kit.app.get_app().get_extension_manager()
     for ext in XR_EXTENSIONS:
         if not ext_manager.is_extension_enabled(ext):
             ext_manager.set_extension_enabled_immediate(ext, True)
+
 
 enable_xr_extensions()
 

@@ -272,8 +272,8 @@ lerobot-teleoperate \
     --display_data=true \
     --display_mode="foxglove"
 ```
-Note: 
-The default display mode overloads the memory, switching to foxglove seems to fix this. 
+Note:
+The default display mode overloads the memory, switching to foxglove seems to fix this.
 
 
 **Tuning notes:**
@@ -412,7 +412,7 @@ Example of training with repo test_wave_3:
 ```bash
 lerobot-train \
     --dataset.repo_id=local/test_wave_3 \
-    --dataset.root="/home/rpl/.cache/huggingface/lerobot/local/test_wave_3_20260901_211945" \ 
+    --dataset.root="/home/rpl/.cache/huggingface/lerobot/local/test_wave_3_20260901_211945" \
     --dataset.repo_type=dataset \
     --policy.type=act \
     --output_dir=outputs/train/wave_test_3 \
@@ -421,11 +421,11 @@ lerobot-train \
     --policy.repo_id=local/wave_test
 ```
 
-Note: I had to manually removed the depth frame in the dataset's "info.json", as it wasn't compatible with ACT. It's possible it's supported by other models. 
+Note: I had to manually removed the depth frame in the dataset's "info.json", as it wasn't compatible with ACT. It's possible it's supported by other models.
 
 ## Running trained policy:
 
-With the node running in the background at "http://localhost:2000": 
+With the node running in the background at "http://localhost:2000":
 
 Run the "rollout action" on the open arm module, either from the dashboard or using:
 
@@ -439,7 +439,7 @@ args = {"model_id": "local/my_model_id", #the lerobot model id for your pretrain
         "policy_path": "path/to/your/policy" #the path to the folder containing the config.json for your pretrained model
         "duration": 10 #duration in seconds
         "task": "wave" #the task to perform
-        } 
+        }
 rollout_request.args = args
 open_arm_client.send_action(rollout_request)
 ```

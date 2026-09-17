@@ -3,37 +3,51 @@
 
 from typing import Annotated, Optional
 
+from lerobot.cameras.opencv import OpenCVCameraConfig
+from lerobot.cameras.realsense import RealSenseCameraConfig
 from madsci.common.types.action_types import ActionFailed
+from madsci.common.types.location_types import LocationArgument
 from madsci.common.types.node_types import RestNodeConfig
 from madsci.node_module.helpers import action
 from madsci.node_module.rest_node_module import RestNode
-from madsci.common.types.location_types import LocationArgument
-from pathlib import Path
-from lerobot.cameras import CameraConfig
-from lerobot.cameras.opencv import OpenCVCameraConfig
-from lerobot.cameras.realsense import RealSenseCameraConfig
 
 from openarm_interface.openarm_interface import OpenArmBimanual
 
+#  "right_wrist_right": {"type": "opencv", "index_or_path": "/dev/video3", "width": 640, "height": 480, "fps": 30, "fourcc": "MJPG"}
 
-        #  "right_wrist_right": {"type": "opencv", "index_or_path": "/dev/video3", "width": 640, "height": 480, "fps": 30, "fourcc": "MJPG"}
 
 class OpenArmNodeConfig(RestNodeConfig):
     """Configuration for the OpenArm node module."""
-
-
 
     right_can: str = "can0"
     """CAN interface for the right arm."""
     left_can: str = "can1"
     """CAN interface for the left arm."""
-    camera_config: dict= { 
-        "left_chest": {"type": "intelrealsense", "serial_number_or_name": "025222071898", "width": 848, "height": 480, "fps": 30}, 
-        "left_wrist_left": {"type": "opencv", "index_or_path": "/dev/video-wrist-left", "width": 640, "height": 480, "fps": 30, "fourcc": "MJPG"},
-        "right_wrist_right": {"type": "opencv", "index_or_path": "/dev/video2", "width": 640, "height": 480, "fps": 30, "fourcc": "MJPG"}
-                
-
-         }
+    camera_config: dict = {
+        "left_chest": {
+            "type": "intelrealsense",
+            "serial_number_or_name": "025222071898",
+            "width": 848,
+            "height": 480,
+            "fps": 30,
+        },
+        "left_wrist_left": {
+            "type": "opencv",
+            "index_or_path": "/dev/video-wrist-left",
+            "width": 640,
+            "height": 480,
+            "fps": 30,
+            "fourcc": "MJPG",
+        },
+        "right_wrist_right": {
+            "type": "opencv",
+            "index_or_path": "/dev/video2",
+            "width": 640,
+            "height": 480,
+            "fps": 30,
+            "fourcc": "MJPG",
+        },
+    }
     """Camera configuration."""
     use_velocity_and_torque: bool = True
 
@@ -58,8 +72,8 @@ class OpenArmNode(RestNode):
         self.robot = OpenArmBimanual(
             right_can=self.config.right_can,
             left_can=self.config.left_can,
-            cameras=cameras_objects, 
-            use_velocity_and_torque=self.config.use_velocity_and_torque
+            cameras=cameras_objects,
+            use_velocity_and_torque=self.config.use_velocity_and_torque,
         )
         self.robot.initialize()
         self.logger.log_info("OpenArm Node initialized.")
@@ -79,24 +93,33 @@ class OpenArmNode(RestNode):
         """Periodically called to update the current state of the node."""
         try:
             if self.robot is not None:
-                self.node_state = { "connected": self.robot.arms.is_connected}
+                self.node_state = {"connected": self.robot.arms.is_connected}
         except Exception as err:
-                    self.logger.log_error(f"Error shutting down the OpenArm Node: {err}")
-                    raise err
+            self.logger.log_error(f"Error shutting down the OpenArm Node: {err}")
+            raise err
+
     # ------------------------------------------------------------------
     # Actions
     # ------------------------------------------------------------------
 
-    @action(name="home", description="Move one or both arms to the zero position using cosine easing.")
+    @action(
+        name="home",
+        description="Move one or both arms to the zero position using cosine easing.",
+    )
     def home(
         self,
         right: Annotated[bool, "Home the right arm."] = True,
         left: Annotated[bool, "Home the left arm."] = True,
-        speed: Annotated[Optional[float], "Motion speed [0.0-1.0]. 0 = slowest, 1 = fastest. Defaults to interface default."] = None,
+        speed: Annotated[
+            Optional[float],
+            "Motion speed [0.0-1.0]. 0 = slowest, 1 = fastest. Defaults to interface default.",
+        ] = None,
     ) -> Optional[ActionFailed]:
         """Move one or both arms smoothly to their zero (home) position."""
         if not right and not left:
-            return ActionFailed(errors=["At least one arm must be selected (right and/or left)."])
+            return ActionFailed(
+                errors=["At least one arm must be selected (right and/or left)."]
+            )
         try:
             kwargs = {"right": right, "left": left}
             if speed is not None:
@@ -106,34 +129,60 @@ class OpenArmNode(RestNode):
             return ActionFailed(errors=[f"Home failed: {err}"])
         return None
 
-    @action(name="move_t", description="Move one or both arms to specified joint configurations.")
+    @action(
+        name="move_t",
+        description="Move one or both arms to specified joint configurations.",
+    )
     def move_to_location(
         self,
         location: Annotated[LocationArgument, "target location"],
-        speed: Annotated[Optional[float], "Motion speed [0.0-1.0]. 0 = slowest, 1 = fastest. Defaults to interface default."] = None,
+        speed: Annotated[
+            Optional[float],
+            "Motion speed [0.0-1.0]. 0 = slowest, 1 = fastest. Defaults to interface default.",
+        ] = None,
     ) -> Optional[ActionFailed]:
         """Move one or both arms to the specified joint configuration using cosine easing."""
         left_target = {
-                    key.removeprefix("left_"): value for key, value in location.representation.items() if key.startswith("left_")
-                }
-                # Remove "right_" prefix
+            key.removeprefix("left_"): value
+            for key, value in location.representation.items()
+            if key.startswith("left_")
+        }
+        # Remove "right_" prefix
         right_target = {
-                    key.removeprefix("right_"): value for key, value in location.representation.items() if key.startswith("right_")
-                }
+            key.removeprefix("right_"): value
+            for key, value in location.representation.items()
+            if key.startswith("right_")
+        }
         left_angles = list(left_target.values()) if left_target else None
         right_angles = list(right_target.values()) if right_target else None
         if right_angles is None and left_angles is None:
-            return ActionFailed(errors=["At least one of right_angles or left_angles must be provided."])
+            return ActionFailed(
+                errors=["At least one of right_angles or left_angles must be provided."]
+            )
         self.robot.move_arms_to_target(right_angles, left_angles, speed)
         return None
+
     @action
-    def replay(self, repo_id: Annotated[str, "lerobot repo id for the episode"], episode: Annotated[int, "lerobot episode number to replay"], fps: int = 30) -> None:
+    def replay(
+        self,
+        repo_id: Annotated[str, "lerobot repo id for the episode"],
+        episode: Annotated[int, "lerobot episode number to replay"],
+        fps: int = 30,
+    ) -> None:
         """replay a pretrained teleop trajectory"""
         self.robot.replay_example(repo_id, episode, self.config.dataset_root, fps)
 
     @action
-    def rollout(self, policy_path: Annotated[str, "path to the folder containg the policies config.json"], task: Annotated[str, "the task to perform"], duration: Annotated[int, "the duration of the rollout in seconds"]) -> None:
+    def rollout(
+        self,
+        policy_path: Annotated[
+            str, "path to the folder containg the policies config.json"
+        ],
+        task: Annotated[str, "the task to perform"],
+        duration: Annotated[int, "the duration of the rollout in seconds"],
+    ) -> None:
         self.robot.rollout(policy_path, task, duration)
+
     # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------

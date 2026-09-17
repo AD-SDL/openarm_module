@@ -66,4 +66,4 @@ lerobot-teleoperate \
 #   --robot.right_arm_config.cameras="{ \
 #         wrist_right: {type: opencv, index_or_path: /dev/video2, width: 640, height: 480, fps: 30, fourcc: MJPG} \
 #     }" \
-  
+

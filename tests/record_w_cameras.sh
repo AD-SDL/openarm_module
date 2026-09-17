@@ -37,7 +37,7 @@ lerobot-record \
     --dataset.episode_time_s=20 \
     --dataset.reset_time_s=10 \
     --dataset.push_to_hub=false \
-    --display_data=false 
+    --display_data=false
 
 
     # --robot.right_arm_config.cameras="{ \
